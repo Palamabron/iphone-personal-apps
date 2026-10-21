@@ -1,0 +1,13 @@
+{
+  "name": "focus-tube",
+  "version": "0.1.1",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "test": "node --test",
+    "build:ios": "node scripts/build-ios.mjs"
+  }
+}

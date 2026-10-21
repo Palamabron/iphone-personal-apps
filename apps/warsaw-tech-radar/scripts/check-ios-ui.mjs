@@ -1,0 +1,82 @@
+// Desktop check of the bundled UI and native-message contract, not an iOS simulator.
+import { createRequire } from 'node:module';
+import { readFile } from 'node:fs/promises';
+import { spawnSync } from 'node:child_process';
+import { Script } from 'node:vm';
+import assert from 'node:assert/strict';
+const root = new URL('../', import.meta.url);
+assert.equal(spawnSync(process.execPath, ['scripts/prepare-ios.mjs'], { cwd: root, stdio: 'inherit' }).status, 0);
+const html = await readFile(new URL('build/ios/resources/radar.html', root), 'utf8');
+for (const match of html.matchAll(/<script>([\s\S]*?)<\/script>/g)) new Script(match[1]);
+const require = createRequire(import.meta.url);
+const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
+const browser = await chromium.launch({ headless: true, ...(process.env.BROWSER_CHANNEL ? { channel: process.env.BROWSER_CHANNEL } : {}) });
+try {
+  const context = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+  await context.route('https://radar.test/**', route => route.fulfill({ contentType: 'text/html', body: html }));
+  await context.addInitScript(() => {
+    window.__RADAR_NATIVE_STATE__ = Object.fromEntries(['warsaw-radar-v1', 'warsaw-radar-snapshot-v1'].map(key => [key, window.localStorage.getItem(key)]).filter(([, value]) => value));
+    window.__TEST_MESSAGES__ = [];
+    window.__TEST_FAIL_NETWORK__ = false;
+    window.webkit = { messageHandlers: { radar: { postMessage: message => {
+      window.__TEST_MESSAGES__.push(message);
+      if (message.type === 'store') window.localStorage.setItem(message.key, message.value);
+      if (message.type === 'share') setTimeout(() => window.__radarNativeComplete(message.id, { ok: true }));
+      if (message.type === 'fetch') {
+        const fixture = { '@context': 'https://schema.org', '@type': 'Event', name: 'Test mostu iOS · AI meetup', url: 'https://luma.com/ios-bridge-test', startDate: new Date(Date.now() + 86400000 * 2).toISOString(), location: { '@type': 'Place', name: 'Sala testowa', address: { addressLocality: 'Warszawa' } }, isAccessibleForFree: true };
+        const body = '<script type="application/ld+json">' + JSON.stringify(fixture) + '</' + 'script>';
+        setTimeout(() => window.__radarNativeComplete(message.id, window.__TEST_FAIL_NETWORK__ ? { error: 'Test niedostępnego źródła' } : { status: 200, headers: { 'content-type': 'text/html' }, body }));
+      }
+    } } } };
+  });
+  const page = await context.newPage(), errors = [], requests = [];
+  page.on('pageerror', error => errors.push(error.message));
+  page.on('request', request => requests.push(request.url()));
+  await page.goto('https://radar.test/');
+  await page.waitForSelector('.event-card');
+  assert.equal(await page.locator('.event-card').count(), 12);
+  assert.equal(await page.evaluate(() => window.RADAR_NATIVE), true);
+  assert.equal(await page.locator('.install').textContent().then(text => text.includes('Udostępnij → Dodaj')), false);
+  await page.getByRole('button', { name: 'Idę', exact: true }).first().click();
+  const savedTitle = await page.locator('.event-card h3').first().textContent();
+  await page.reload();
+  await page.waitForSelector('.event-card');
+  await page.getByRole('button', { name: /Zapisane/ }).click();
+  assert.equal(await page.locator('.event-card').count(), 1);
+  assert.equal(await page.locator('.event-card h3').textContent(), savedTitle);
+  await page.getByRole('button', { name: /Kalendarz/ }).click();
+  await page.waitForFunction(() => window.__TEST_MESSAGES__.some(message => message.type === 'share'));
+  const calendar = await page.evaluate(() => window.__TEST_MESSAGES__.find(message => message.type === 'share'));
+  assert.equal(calendar.filename, 'wydarzenie.ics');
+  assert.match(calendar.content, /BEGIN:VCALENDAR/);
+  await page.getByText('Twoje zainteresowania i dane', { exact: true }).click();
+  await page.getByRole('button', { name: 'Eksportuj moje dane', exact: true }).click();
+  const backup = await page.evaluate(() => window.__TEST_MESSAGES__.find(message => message.filename === 'warsaw-radar-kopia.json'));
+  assert.equal(Object.values(JSON.parse(backup.content).decisions).includes('going'), true);
+  await page.getByRole('button', { name: '＋ Dodaj wydarzenie' }).click();
+  await page.locator('#import-url').fill('https://luma.com/ios-bridge-test');
+  await page.getByRole('button', { name: 'Pobierz dane z linku' }).click();
+  await page.waitForFunction(() => document.querySelector('#import-title').value.includes('Test mostu iOS'));
+  assert.equal(await page.locator('#import-place').inputValue(), 'Sala testowa');
+  await page.getByRole('button', { name: 'Zapisz wydarzenie' }).click();
+  await page.getByRole('button', { name: 'Odkrywaj', exact: true }).click();
+  await page.locator('#search').fill('Test mostu iOS');
+  assert.equal(await page.locator('.event-card').count(), 1);
+  await page.getByRole('button', { name: '＋ Dodaj wydarzenie' }).click();
+  const nativeFetches = await page.evaluate(() => window.__TEST_MESSAGES__.filter(message => message.type === 'fetch').length);
+  await page.locator('#import-url').fill('https://example.com/disallowed');
+  await page.getByRole('button', { name: 'Pobierz dane z linku' }).click();
+  await page.waitForFunction(() => document.querySelector('#import-feedback').textContent.includes('publiczny link Luma/Evenea'));
+  assert.equal(await page.evaluate(() => window.__TEST_MESSAGES__.filter(message => message.type === 'fetch').length), nativeFetches);
+  await page.getByRole('button', { name: 'Zamknij', exact: true }).click();
+  await page.locator('#search').fill('');
+  await page.getByRole('button', { name: /Zapisane/ }).click();
+  await page.evaluate(() => { window.__TEST_FAIL_NETWORK__ = true; });
+  await page.getByRole('button', { name: /Odśwież źródła/ }).click();
+  await page.waitForFunction(() => !document.querySelector('#refresh').disabled);
+  assert.equal(await page.locator('.event-card').count(), 1);
+  assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
+  assert.equal(requests.some(url => !url.startsWith('https://radar.test/')), false);
+  assert.deepEqual(errors, []);
+  console.log('Bundled iOS UI: syntax, initial snapshot, native save/reload, ICS/JSON share, source import/allowlist, partial failure preservation, no network leak/errors. Native bridge mocked in Chromium; Xcode/device tests pending.');
+} finally { await browser.close(); }

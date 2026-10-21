@@ -1,0 +1,130 @@
+{
+  "generatedAt": "2026-10-21T16:01:44.275Z",
+  "files": [
+    {
+      "path": "apps/focus-tube/docs/IPHONE_SIDELOAD.md",
+      "bytes": 3320,
+      "sha256": "213c18283d1d2c5090a1b0e9c37529e80c61ea3288c652710d8fa190fbfd266e"
+    },
+    {
+      "path": "apps/focus-tube/scripts/build-ios.mjs",
+      "bytes": 3725,
+      "sha256": "c0cef3ebe1229ce342ee8c249876fa3694b104f332c755202a38bb2139f376b6"
+    },
+    {
+      "path": "apps/focus-tube/scripts/build.mjs",
+      "bytes": 2820,
+      "sha256": "0a7af09dc3a3c0dc8d71f68ef27051949538525a5fcee0a028e07edf86915f40"
+    },
+    {
+      "path": "apps/focus-tube/src/core.js",
+      "bytes": 3785,
+      "sha256": "e3c33c12b59e65f403c6249e8b93bc724dd99da2fd90ed1ae7dc58acb4919d7f"
+    },
+    {
+      "path": "apps/focus-tube/src/filter.js",
+      "bytes": 23286,
+      "sha256": "c9c9f9626b3e9bcbace8cd1028db8af74470e66303a9fe5d1807bdfd588469e5"
+    },
+    {
+      "path": "apps/focus-tube/tests/core.test.mjs",
+      "bytes": 3804,
+      "sha256": "00d8c26595537acfe188e1c97a83a1297608021acc0b34abb4089c59b85b8fa0"
+    },
+    {
+      "path": "apps/warsaw-tech-radar/data/events.json",
+      "bytes": 29653,
+      "sha256": "b78d591fe6000bb618e5c279df2e10156ff555a43ea57b1bacc8f08c346ca1e3"
+    },
+    {
+      "path": "apps/warsaw-tech-radar/docs/IPHONE_SIDELOAD.md",
+      "bytes": 3430,
+      "sha256": "5a3b88eff56a6c2dff65320413d62e123bceecd1112f2d188301be91b74c8ce6"
+    },
+    {
+      "path": "apps/warsaw-tech-radar/ios/RadarApp.swift",
+      "bytes": 9536,
+      "sha256": "ef8bbf18ca0651d5c67a7b84749ceef60314d8154b25cd65d88030f6df19040e"
+    },
+    {
+      "path": "apps/warsaw-tech-radar/lib/collector.mjs",
+      "bytes": 19741,
+      "sha256": "15505841c5763928c13362a8fd4aa6a10bfc437d4c393f6b5ac4a1f796319e10"
+    },
+    {
+      "path": "apps/warsaw-tech-radar/lib/core.mjs",
+      "bytes": 8782,
+      "sha256": "d4e9020296a5ed7cc54c23ba17c99af2a05613b973876245054614cf0caf8c95"
+    },
+    {
+      "path": "apps/warsaw-tech-radar/scripts/build-ios.mjs",
+      "bytes": 6162,
+      "sha256": "e1c94f8c6096057b010c812f01e88b5b1f9c4a5634ee6780ab5374730f06eaa0"
+    },
+    {
+      "path": "apps/warsaw-tech-radar/scripts/check-ios-ui.mjs",
+      "bytes": 6520,
+      "sha256": "2f408dc3d8d83056b3a259eb7f5fad28d170ccdddbadbf2df93b70c4ed77661a"
+    },
+    {
+      "path": "apps/warsaw-tech-radar/scripts/prepare-ios.mjs",
+      "bytes": 5898,
+      "sha256": "6eeac881c03fd0a8ef1b6935a22927ad34ce920b43f2e62725c83b8df4c1aaf9"
+    },
+    {
+      "path": "apps/warsaw-tech-radar/tests/collector.test.mjs",
+      "bytes": 8350,
+      "sha256": "303ab4b53f551d38b5dcbe328105ff28dd55cc3a3ccebd2786c8ec47e289bade"
+    },
+    {
+      "path": "apps/warsaw-tech-radar/tests/core.test.mjs",
+      "bytes": 4465,
+      "sha256": "704f69da5b24554cb3e3c9d67872a874d9aa31763144628fa7dff97134a9adcb"
+    },
+    {
+      "path": "apps/warsaw-tech-radar/web/app.mjs",
+      "bytes": 16839,
+      "sha256": "703151ae4dac6bc5a96feb247ab1a6a1993ce48243edf66b5faf65b5fd13589d"
+    },
+    {
+      "path": "apps/warsaw-tech-radar/web/apple-touch-icon.png",
+      "bytes": 6387,
+      "sha256": "810a3850135c37e3ce96ffb4ab9ab0a84980dcf6c437963981c6f964e9c054f6"
+    },
+    {
+      "path": "apps/warsaw-tech-radar/web/icon-192.png",
+      "bytes": 6984,
+      "sha256": "d6dbffaee0c9dd8001dc1a4be0113cd1e8905e170039269c259611e8199c2c5a"
+    },
+    {
+      "path": "apps/warsaw-tech-radar/web/icon-512.png",
+      "bytes": 25098,
+      "sha256": "9cd29ec311ee7159bdea216668677d6a9f33b31b23e97b1e5717fdaa3223edb1"
+    },
+    {
+      "path": "apps/warsaw-tech-radar/web/icon.svg",
+      "bytes": 366,
+      "sha256": "27a88d1a807710e8b6730e3b803276cf9e6c94e93db54db7c6260d6b186779ed"
+    },
+    {
+      "path": "apps/warsaw-tech-radar/web/index.html",
+      "bytes": 6330,
+      "sha256": "af0a6822bd132f6c62f31b72a1fa348efbac434c461e3f6a622909212e467809"
+    },
+    {
+      "path": "apps/warsaw-tech-radar/web/manifest.webmanifest",
+      "bytes": 416,
+      "sha256": "2fd5a8b1efa233f1e0b36183138dccede5ae6a7cd2ab9807f22d7c84b87f0c13"
+    },
+    {
+      "path": "apps/warsaw-tech-radar/web/styles.css",
+      "bytes": 11130,
+      "sha256": "f8060462f8f6a0b891cb9d9c22ccd593f428134a804fbbd9f67f6026e5b0823a"
+    },
+    {
+      "path": "apps/warsaw-tech-radar/web/sw.js",
+      "bytes": 1427,
+      "sha256": "d02bab783e65a4a5c29082ccb56d8e39b1e29b50dc3ae416d608e9fb60fa534b"
+    }
+  ]
+}

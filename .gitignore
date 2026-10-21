@@ -1,0 +1,9 @@
+build/
+dist/
+node_modules/
+.DS_Store
+*.p12
+*.mobileprovision
+*.xcuserstate
+xcuserdata/
+DerivedData/
