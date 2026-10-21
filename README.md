@@ -1,11 +1,16 @@
 # Osobiste aplikacje iPhone
 
-Przygotowany do przeglądu pakiet źródeł: Focus Tube (własne rozszerzenie Safari) i Warsaw Tech Radar (aplikacja z lokalnym interfejsem). Bez historii prywatnych repozytoriów, konfiguracji hostingu, haseł, certyfikatów, plików parowania i danych preferencji. Dołączone wydarzenia są odczytem publicznych źródeł.
+Dwie aplikacje na iOS 18 lub nowszy, instalowane bez płatnego konta Apple Developer. Windows lub Ubuntu wystarcza do instalacji przez SideStore. Źródła wybrane za zgodą właściciela; pierwotne repozytoria pozostają prywatne. W repozytorium nie ma konfiguracji prywatnego hostingu, kont, certyfikatów ani danych preferencji. Dołączone wydarzenia pochodzą z publicznych ogłoszeń.
 
-Stan 21.10.2026: publikacja wybranych źródeł zaakceptowana przez właściciela. Pierwsza kompilacja Xcode pozostaje do wykonania. Testy JavaScript i interfejsu na Windowsie przeszły; nie potwierdzają działania kodu iOS.
+| Aplikacja | Co robi | Pobierz |
+|---|---|---|
+| Focus Tube 0.1.1 | Własne rozszerzenie Safari filtrujące YouTube, polski ekran konfiguracji | [FocusTube-unsigned.ipa](https://github.com/Palamabron/iphone-personal-apps/releases/download/iphone-2026.10.21/FocusTube-unsigned.ipa) |
+| Tech Radar 0.2.0 | Samodzielna aplikacja z wydarzeniami, lokalnym zapisem i odświeżaniem publicznych źródeł | [TechRadar-unsigned.ipa](https://github.com/Palamabron/iphone-personal-apps/releases/download/iphone-2026.10.21/TechRadar-unsigned.ipa) |
 
-W GitHub Actions uruchom ręcznie Build personal iPhone apps. Workflow używa standardowego macos-15 i blokuje się w repozytorium prywatnym. Nie potrzebuje Apple ID ani certyfikatów. Artefakty IPA są przechowywane przez jeden dzień.
+**[Instrukcja instalacji na iPhonie z Windowsa/Ubuntu](docs/INSTALL_IPHONE.md).** Pobrane IPA trzeba podpisać przy instalacji przez SideStore. Samo pobranie pliku w Safari nie instaluje aplikacji. Darmowy podpis wymaga odnawiania przed upływem 7 dni.
 
-Gotowe IPA podpisuje użytkownik w SideStore na własnym iPhonie. Instalacja SideStore z Windowsa/Ubuntu: https://docs.sidestore.io/docs/installation/prerequisites . Limit darmowego konta i odnawianie co 7 dni nadal obowiązują. Szczegóły każdej aplikacji w apps/<nazwa>/docs/IPHONE_SIDELOAD.md.
+Obie kompilacje Xcode oraz kontrole paczek urządzenia przeszły: [wynik GitHub Actions](https://github.com/Palamabron/iphone-personal-apps/actions/runs/39633098802), [zakres walidacji](docs/BUILD-VALIDATION.md). **Instalacja, podpisanie i działanie na fizycznym iPhonie pozostają do potwierdzenia.**
 
-Kompilacja każdej aplikacji lokalnie na Macu z Xcode: przejść do apps/<nazwa> i uruchomić node scripts/build-ios.mjs. Nie korzystać z firmowego komputera bez zgody firmy.
+W GitHub Actions można ręcznie uruchomić Build personal iPhone apps. Workflow używa standardowego macos-15, nie potrzebuje konta Apple i pomija prywatne repozytoria, by nie zużywać płatnych minut. Artefakty Actions są dostępne przez jeden dzień; pliki wydania mają stałe linki powyżej. [Zasady bezpłatnego użycia GitHub Actions](https://docs.github.com/en/billing/concepts/product-billing/github-actions).
+
+Kompilacja lokalna na własnym Macu z Xcode: przejść do `apps/<nazwa>` i uruchomić `node scripts/build-ios.mjs`. Testy wspólnej logiki: `node --test` w danym katalogu aplikacji. Ikony odtwarza `node scripts/create-icons.mjs`. Manifest źródeł odświeża `node scripts/update-source-manifest.mjs`.

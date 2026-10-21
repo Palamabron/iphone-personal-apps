@@ -1,12 +1,12 @@
 # iPhone bez prywatnego Maca
 
-Stan: 21.10.2026. Źródła i proces kompilacji przygotowane; nie wykonano kompilacji Xcode ani instalacji IPA. To nie jest gotowy, sprawdzony plik aplikacji.
+Stan: 21.10.2026. Kompilacja Xcode aplikacji i rozszerzenia oraz kontrola pakietu IPA przeszły. [Pobierz plik i instrukcję](https://github.com/Palamabron/iphone-personal-apps). Podpisanie SideStore, symulator i fizyczny iPhone pozostają do sprawdzenia. Oryginalne repozytorium zachowano prywatne; wybrane źródła opublikowano za zgodą właściciela w osobnym repozytorium.
 
 ## Wybrany wariant Focus Tube
 
 Własna aplikacja iOS zawierająca rozszerzenie Safari, zbudowana z tego samego filtra co Userscripts. Instalacja IPA zastępuje instalowanie menedżera Userscripts i ręczne przenoszenie pliku JavaScript. Oglądanie nadal odbywa się w Safari, dzięki czemu pozostaje w tej samej sesji konta YouTube. Nie jest to własny odtwarzacz wewnątrz aplikacji ani nakładka na oficjalny YouTube.
 
-Packager Xcode generuje kontener aplikacji oraz rozszerzenie. Trzeba sprawdzić na telefonie podpisanie rozszerzenia przez SideStore, jego uruchomienie oraz działanie kontekstu MAIN w docelowej wersji Safari. Nie deklarujemy, że sama kompilacja potwierdzi działanie Premium.
+Packager Xcode generuje kontener aplikacji oraz rozszerzenie. Gotowy pakiet ma polski ekran konfiguracji i ikony. Trzeba sprawdzić na telefonie podpisanie rozszerzenia przez SideStore, jego uruchomienie oraz działanie kontekstu MAIN w docelowej wersji Safari. Nie deklarujemy, że sama kompilacja potwierdzi działanie Premium. [Raport kompilacji i znane ostrzeżenie generatora](https://github.com/Palamabron/iphone-personal-apps/blob/main/docs/BUILD-VALIDATION.md).
 
 ## Kompilacja bez firmowego MacBooka
 

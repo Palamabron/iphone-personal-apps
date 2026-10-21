@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-21T16:15:09.090Z",
+  "generatedAt": "2026-10-21T16:20:27.262Z",
   "textLineEndings": "LF",
   "files": [
     {
@@ -14,13 +14,13 @@
     },
     {
       "path": "README.md",
-      "bytes": 1298,
-      "sha256": "14e3bcdae35471198b261c46a611838deda9660cd5b907b5a71a2d1f62ecdbf9"
+      "bytes": 2244,
+      "sha256": "bad278d1863d0b6fbefb5120c2102a2c8a9814cf3315c274fd4672587e81cfe2"
     },
     {
       "path": "apps/focus-tube/docs/IPHONE_SIDELOAD.md",
-      "bytes": 3320,
-      "sha256": "213c18283d1d2c5090a1b0e9c37529e80c61ea3288c652710d8fa190fbfd266e"
+      "bytes": 3732,
+      "sha256": "8c1630d4431bd214f71b397f61935e153b66ab729a6236bc7d8f110870d8625c"
     },
     {
       "path": "apps/focus-tube/ios/AppIcon.png",
@@ -84,8 +84,8 @@
     },
     {
       "path": "apps/warsaw-tech-radar/docs/IPHONE_SIDELOAD.md",
-      "bytes": 3430,
-      "sha256": "5a3b88eff56a6c2dff65320413d62e123bceecd1112f2d188301be91b74c8ce6"
+      "bytes": 3567,
+      "sha256": "a1cfcb18fd66a403adb036f3b859ff187b8b882b775c7045bc0238e6c046b86d"
     },
     {
       "path": "apps/warsaw-tech-radar/ios/AppIcon.png",
@@ -181,6 +181,16 @@
       "path": "apps/warsaw-tech-radar/web/sw.js",
       "bytes": 1427,
       "sha256": "d02bab783e65a4a5c29082ccb56d8e39b1e29b50dc3ae416d608e9fb60fa534b"
+    },
+    {
+      "path": "docs/BUILD-VALIDATION.md",
+      "bytes": 2743,
+      "sha256": "b219b0d1f4cb58e11eeccf99fdbf74388e8a9edb6f36c7a76750cc4559bd50b7"
+    },
+    {
+      "path": "docs/INSTALL_IPHONE.md",
+      "bytes": 3876,
+      "sha256": "acefb8fcd287db9ccb2d0a20d03c214d8be16abf17d4922b5d708a88caf93463"
     },
     {
       "path": "scripts/create-icons.mjs",
