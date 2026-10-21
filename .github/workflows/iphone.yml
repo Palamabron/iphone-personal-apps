@@ -28,9 +28,13 @@ jobs:
         run: node --test
       - name: Build unsigned IPA without Apple credentials
         run: node scripts/build-ios.mjs
+      - name: Validate device package
+        run: python3 ../../scripts/validate-ipa.py build/ios/*-unsigned.ipa
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.app }}-iPhone
-          path: apps/${{ matrix.app }}/build/ios/*-unsigned.ipa
+          path: |
+            apps/${{ matrix.app }}/build/ios/*-unsigned.ipa
+            apps/${{ matrix.app }}/build/ios/*.validation.json
           retention-days: 1
           if-no-files-found: error
