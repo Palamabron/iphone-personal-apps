@@ -1,0 +1,49 @@
+name: Build Focus Tube Native
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    if: github.event.repository.private == false
+    runs-on: macos-15
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: apps/focus-tube
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Verify filter and native URL policy
+        run: |
+          node --test
+          swiftc ios/FocusPolicy.swift tests/FocusPolicyTests.swift -o /tmp/focus-policy-tests
+          /tmp/focus-policy-tests
+      - name: Build standalone unsigned iPhone app
+        run: node scripts/build-native-ios.mjs
+      - name: Validate iPhone package
+        run: python3 ../../scripts/validate-ipa.py build/ios/FocusTubeNative-unsigned.ipa
+      - name: Build and launch simulator app
+        run: |
+          PROJECT=$(find build/ios -maxdepth 2 -name FocusTubeNative.xcodeproj -print -quit)
+          xcodebuild -project "$PROJECT" -scheme FocusTubeNative -configuration Release -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath build/simulator CODE_SIGNING_ALLOWED=NO build > build/simulator-build.log 2>&1
+          DEVICE=$(xcrun simctl list devices available -j | python3 -c 'import json,sys; d=json.load(sys.stdin); print(next(v["udid"] for group in d["devices"].values() for v in group if "iPhone" in v["name"]))')
+          xcrun simctl boot "$DEVICE"
+          xcrun simctl bootstatus "$DEVICE" -b
+          xcrun simctl install "$DEVICE" build/simulator/Build/Products/Release-iphonesimulator/FocusTubeNative.app
+          xcrun simctl launch "$DEVICE" dev.palamabron.focustube.native
+          sleep 4
+          xcrun simctl io "$DEVICE" screenshot build/ios/FocusTubeNative-home.png
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: focus-tube-native-iPhone
+          path: |
+            apps/focus-tube/build/ios/*-unsigned.ipa
+            apps/focus-tube/build/ios/*.validation.json
+            apps/focus-tube/build/ios/*.png
+            apps/focus-tube/build/simulator-build.log
+          retention-days: 3
+          if-no-files-found: error

@@ -24,7 +24,14 @@ for argument in sys.argv[1:]:
         assert not any(name.endswith('.mobileprovision') for name in names)
         assert info.get('CFBundleIcons', {}).get('CFBundlePrimaryIcon', {}).get('CFBundleIconName')
         extensions = []
-        if 'FocusTube' in package.name:
+        if 'FocusTubeNative' in package.name:
+            assert info['CFBundleIdentifier'] == 'dev.palamabron.focustube.native'
+            assert info['CFBundleShortVersionString'] == '0.2.0'
+            assert not any('.appex/' in name for name in names)
+            code = archive.read(app + '/filter.js').decode()
+            assert 'installFocusTube' in code and 'data-ft-active' in code
+            assert "includes(location.hostname)" in code
+        elif 'FocusTube' in package.name:
             extension_info = next(name for name in names if name.endswith('.appex/Info.plist'))
             extension = plistlib.loads(archive.read(extension_info))
             assert extension['NSExtension']['NSExtensionPointIdentifier'] == 'com.apple.Safari.web-extension'

@@ -8,6 +8,7 @@
   },
   "scripts": {
     "test": "node --test",
-    "build:ios": "node scripts/build-ios.mjs"
+    "build:ios": "node scripts/build-ios.mjs",
+    "build:native:ios": "node scripts/build-native-ios.mjs"
   }
 }
