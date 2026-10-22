@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-22T00:00:00.085Z",
+  "generatedAt": "2026-10-22T00:05:13.596Z",
   "textLineEndings": "LF",
   "files": [
     {
@@ -19,8 +19,8 @@
     },
     {
       "path": "README.md",
-      "bytes": 2244,
-      "sha256": "bad278d1863d0b6fbefb5120c2102a2c8a9814cf3315c274fd4672587e81cfe2"
+      "bytes": 2595,
+      "sha256": "b51545a31c08b92e7689552d1c58a9421a2aa681de185deab812bf12de28b233"
     },
     {
       "path": "apps/focus-tube/docs/IPHONE_SIDELOAD.md",
@@ -209,13 +209,13 @@
     },
     {
       "path": "docs/BUILD-VALIDATION.md",
-      "bytes": 2743,
-      "sha256": "b219b0d1f4cb58e11eeccf99fdbf74388e8a9edb6f36c7a76750cc4559bd50b7"
+      "bytes": 4392,
+      "sha256": "cfaaf99e90ebbe9f7e767b3fd1ecf495f7c65dda944f518bd43151d25c207240"
     },
     {
       "path": "docs/FOCUS-NATIVE.md",
       "bytes": 3071,
-      "sha256": "609220fb7bcffeccdb8eb543a51e877352b3de48472943fe4f3096077cac766c"
+      "sha256": "bdf0748668bfd654847f2521e400b2dd5be7553c58db8d8f3ff338c87052e881"
     },
     {
       "path": "docs/INSTALL_IPHONE.md",

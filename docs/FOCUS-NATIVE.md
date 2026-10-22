@@ -1,6 +1,6 @@
 # Focus Tube Native 0.2.0
 
-Samodzielna aplikacja, odrębna od rozszerzenia Safari 0.1.1. Identyfikator `dev.palamabron.focustube.native`. Natynwy ekran startowy SwiftUI, wyszukiwarka, zapis do 100 linków lokalnie, powrót, odświeżanie, subskrypcje i wybór konta. Wyniki i oficjalny odtwarzacz YouTube działają w WKWebView wewnątrz aplikacji, bez przechodzenia do Safari. To nie jest w pełni natywny klon wszystkich ekranów YouTube.
+Samodzielna aplikacja, odrębna od rozszerzenia Safari 0.1.1. Identyfikator `dev.palamabron.focustube.native`. Natywny ekran startowy SwiftUI, wyszukiwarka, zapis do 100 linków lokalnie, powrót, odświeżanie, subskrypcje i wybór konta. Wyniki i oficjalny odtwarzacz YouTube działają w WKWebView wewnątrz aplikacji, bez przechodzenia do Safari. To nie jest w pełni natywny klon wszystkich ekranów YouTube.
 
 Wbudowany filtr ukrywa rozpoznane Shortsy i rekomendacje, porcjuje wyniki po 15 oraz ogranicza autoplay. Filtr działa również przy zmianie adresu bez przeładowania. Nie ma przełącznika wyłączającego filtrowanie. Widok YouTube pozostaje zasłonięty, jeżeli filtr nie potwierdzi aktywacji. Osobna kontrola natywna blokuje nawigację do Shorts oraz obcych hostów; dopuszcza YouTube i konkretne hosty logowania/zgód Google. Treści osadzonych ramek i media obsługuje WebKit. Nie stosujemy podmiany User-Agent, ekstrakcji strumieni ani kopiowania sesji Safari. Cookies w domyślnym magazynie WebKit zachowują sesję między uruchomieniami.
 
