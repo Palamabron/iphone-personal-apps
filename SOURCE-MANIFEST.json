@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-30T14:57:38.242Z",
+  "generatedAt": "2026-10-30T14:58:06.847Z",
   "textLineEndings": "LF",
   "files": [
     {
@@ -159,8 +159,8 @@
     },
     {
       "path": "apps/warsaw-tech-radar/scripts/prepare-ios.mjs",
-      "bytes": 5785,
-      "sha256": "08d602dc46d74d81f812c42330859a1a2280b12793e7f965f50ef6960273798d"
+      "bytes": 5870,
+      "sha256": "4359be19f98a75efbb30ac6a1d195598770535224bdd780233782c0570072205"
     },
     {
       "path": "apps/warsaw-tech-radar/tests/collector.test.mjs",
