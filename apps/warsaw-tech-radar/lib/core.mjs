@@ -1,5 +1,5 @@
-export const CATEGORIES = { ai: 'ML / AI', startup: 'Startupy', product: 'Produkt', funding: 'Finansowanie', networking: 'Networking' };
-export const DECISIONS = { going: 'Idę', maybe: 'Może', hidden: 'Nie dla mnie' };
+export const CATEGORIES = { ai: 'ML / AI', startup: 'Startups', product: 'Product', funding: 'Funding', networking: 'Networking' };
+export const DECISIONS = { going: 'Going', maybe: 'Maybe', hidden: 'Hide' };
 export const WARSAW = 'Europe/Warsaw';
 
 export function httpUrl(value) {
@@ -45,6 +45,9 @@ export function mergeEvents(...groups) {
     const u = new URL(event.url); u.search = ''; u.hash = ''; const key = u.href.replace(/\/$/, '');
     const old = byKey.get(key);
     if (!old || (event.verifiedAt || '') >= (old.verifiedAt || '')) {
+      // Keep the first identity when a newer observation describes the same event.
+      // Saved decisions use this identity even when a source changes its own ID.
+      if (old) event.id = old.id;
       if (old && ['cancelled', 'postponed'].includes(old.status) && !event.sources.some(s => s.url.replace(/\/$/, '') === key)) {
         event.status = old.status;
       }
@@ -66,7 +69,7 @@ export function warsawDateTime(value) {
   return candidates.find(date => format.format(date).replace(' ', 'T') === value)?.toISOString() || null;
 }
 export function formatDate(iso, options = {}) {
-  return new Intl.DateTimeFormat('pl-PL', { timeZone: WARSAW, day: 'numeric', month: 'short', ...options }).format(new Date(iso));
+  return new Intl.DateTimeFormat('en-GB', { timeZone: WARSAW, day: 'numeric', month: 'short', ...options }).format(new Date(iso));
 }
 export function matchesWarsaw(event) {
   if (event.city) return /^(warsaw|warszawa)(?:$|[,\s])/i.test(event.city);
@@ -78,7 +81,7 @@ export function rankEvent(event, interests = ['ai', 'startup']) {
 }
 export function reasons(event, interests = ['ai', 'startup']) {
   const matched = event.categories.filter(c => interests.includes(c)).map(c => CATEGORIES[c]);
-  return matched.length ? 'Pasuje do: ' + matched.join(', ') : 'Sprawdź program i zdecyduj, czy temat Ci odpowiada.';
+  return matched.length ? 'Matches: ' + matched.join(', ') : 'Check the agenda to see if it interests you.';
 }
 
 export function selectEvents(events, { now = new Date(), days = 30, category = 'all', search = '', price = 'all', saved = false, includeUnknownLocation = false, interests = ['ai', 'startup'], decisions = {} } = {}) {
@@ -98,9 +101,9 @@ export function selectEvents(events, { now = new Date(), days = 30, category = '
 }
 
 export function priceLabel(price) {
-  if (price.kind === 'free') return 'Bezpłatne';
+  if (price.kind === 'free') return 'Free';
   if (price.kind === 'paid' && price.amount !== null && price.currency) return new Intl.NumberFormat('pl-PL', { style: 'currency', currency: /^[A-Z]{3}$/.test(price.currency) ? price.currency : 'PLN', maximumFractionDigits: 2 }).format(price.amount);
-  return price.kind === 'paid' ? 'Płatne · sprawdź cenę' : 'Cena nieustalona';
+  return price.kind === 'paid' ? 'Paid · check price' : 'Price unknown';
 }
 
 const icsEscape = value => String(value || '').replace(/\\/g, '\\\\').replace(/\r\n|\r|\n/g, '\\n').replace(/;/g, '\\;').replace(/,/g, '\\,');

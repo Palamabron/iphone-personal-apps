@@ -225,7 +225,7 @@ export function discoverEventLinks(html, baseUrl) {
 /** Fetch once, bound time/bytes, and never follow an unapproved redirect. */
 export async function fetchPublicPage(input, { fetchImpl = fetch, timeoutMs = TIMEOUT_MS, maxBytes = MAX_BYTES } = {}) {
   let url = safeUrl(input);
-  if (!url) throw new Error('Nieobsługiwany lub niebezpieczny adres źródła.');
+  if (!url) throw new Error('Unsupported or unsafe source URL.');
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
   try {
@@ -237,17 +237,17 @@ export async function fetchPublicPage(input, { fetchImpl = fetch, timeoutMs = TI
       if ([301, 302, 303, 307, 308].includes(response.status)) {
         const target = safeUrl(response.headers.get('location'), url);
         await response.body?.cancel();
-        if (!target) throw new Error('Przekierowanie poza dozwolone publiczne źródła.');
+        if (!target) throw new Error('Redirect to a disallowed source.');
         url = target;
         continue;
       }
-      if (!response.ok) { await response.body?.cancel(); throw new Error(`HTTP ${response.status}; źródło może wymagać dostępu lub blokować pobieranie.`); }
+      if (!response.ok) { await response.body?.cancel(); throw new Error(`HTTP ${response.status}; source may require access or block requests.`); }
       if (Number(response.headers.get('content-length')) > maxBytes) { await response.body?.cancel(); throw new Error('Strona przekracza limit rozmiaru.'); }
       const contentType = response.headers.get('content-type') || '';
-      if (contentType && !/text\/html|application\/(ld\+)?json|text\/plain/.test(contentType)) { await response.body?.cancel(); throw new Error('Nieobsługiwany typ odpowiedzi.'); }
+      if (contentType && !/text\/html|application\/(ld\+)?json|text\/plain/.test(contentType)) { await response.body?.cancel(); throw new Error('Unsupported response type.'); }
       let bytes = 0;
       const chunks = [];
-      if (!response.body) throw new Error('Puste źródło.');
+      if (!response.body) throw new Error('Empty source.');
       const reader = response.body.getReader();
       while (true) {
         const { done, value } = await reader.read();
@@ -263,7 +263,7 @@ export async function fetchPublicPage(input, { fetchImpl = fetch, timeoutMs = TI
       if (/_cf_chl_opt|cf-chl-widget|<title>Just a moment/i.test(html)) throw new Error('Strona wymaga weryfikacji CAPTCHA / Cloudflare. Kolektor jej nie obchodzi.');
       return { html, url, fetchedAt: new Date().toISOString() };
     }
-    throw new Error('Zbyt wiele przekierowań.');
+    throw new Error('Too many redirects.');
   } finally { clearTimeout(timeout); }
 }
 
@@ -276,8 +276,8 @@ function relevant(event, now) {
 /** A snapshot can be written to disk or returned by a private Worker endpoint. */
 export async function collectEvents({ now = new Date().toISOString(), sources = DEFAULT_SOURCES, fetchImpl = fetch, maxPages = 28 } = {}) {
   const timestamp = date(now);
-  if (!timestamp) throw new Error('Parametr now musi zawierać datę ISO z godziną i strefą.');
-  if (!Array.isArray(sources) || sources.length > 15) throw new Error('Dozwolone jest najwyżej 15 źródeł.');
+  if (!timestamp) throw new Error('now must be an ISO date with time and timezone.');
+  if (!Array.isArray(sources) || sources.length > 15) throw new Error('At most 15 sources are allowed.');
   maxPages = Math.max(sources.length, Math.min(Number(maxPages) || 28, 50));
   const events = new Map();
   const reports = [];
@@ -287,9 +287,9 @@ export async function collectEvents({ now = new Date().toISOString(), sources = 
   async function read(source, isSeed) {
     if (pages++ >= maxPages) return;
     const url = safeUrl(source.url);
-    const row = { name: clean(source.name, 120) || url || 'Źródło', url: url || String(source.url).slice(0, 500), status: 'error', fetchedAt: new Date().toISOString(), count: 0 };
+    const row = { name: clean(source.name, 120) || url || 'Source', url: url || String(source.url).slice(0, 500), status: 'error', fetchedAt: new Date().toISOString(), count: 0 };
     reports.push(row);
-    if (!url) { row.error = 'Nieobsługiwany lub niebezpieczny adres źródła.'; return; }
+    if (!url) { row.error = 'Unsupported or unsafe source URL.'; return; }
     fetched.add(url);
     try {
       const page = await fetchPublicPage(url, { fetchImpl });

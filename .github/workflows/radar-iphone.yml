@@ -1,0 +1,32 @@
+name: Build Warsaw Tech Radar iPhone
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    if: github.event.repository.private == false
+    runs-on: macos-15
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: apps/warsaw-tech-radar
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Test events and sources
+        run: node --test
+      - name: Build iPhone application
+        run: node scripts/build-ios.mjs
+      - name: Validate unsigned device package
+        run: python3 ../../scripts/validate-ipa.py build/ios/TechRadar-unsigned.ipa
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tech-radar-iphone
+          path: |
+            apps/warsaw-tech-radar/build/ios/*-unsigned.ipa
+            apps/warsaw-tech-radar/build/ios/*.validation.json
+          retention-days: 3
+          if-no-files-found: error

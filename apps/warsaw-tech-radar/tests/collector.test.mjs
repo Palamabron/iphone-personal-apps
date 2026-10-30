@@ -60,7 +60,7 @@ test('discovers public event links, excludes accounts, asset URLs and login', ()
 
 test('redirects cannot escape the fetch allowlist', async () => {
   let calls = 0;
-  await assert.rejects(fetchPublicPage('https://luma.com/test', { fetchImpl: async () => { calls++; return new Response(null, { status: 302, headers: { location: 'https://127.0.0.1/admin' } }); } }), /Przekierowanie/);
+  await assert.rejects(fetchPublicPage('https://luma.com/test', { fetchImpl: async () => { calls++; return new Response(null, { status: 302, headers: { location: 'https://127.0.0.1/admin' } }); } }), /Redirect/);
   assert.equal(calls, 1);
 });
 

@@ -9,10 +9,19 @@ test('reject unsafe source URLs and timezone-free dates', () => {
   assert.equal(normalizeEvent({ ...fixture, endAt: '2026-10-27T19:00:00' }).endAt, null);
   assert.equal(normalizeEvent({ ...fixture, title: '' }), null);
 });
-test('unknown prices stay unknown and free is explicit', () => { assert.equal(priceLabel(normalizeEvent(fixture).price), 'Cena nieustalona'); assert.equal(priceLabel({ kind: 'free' }), 'Bezpłatne'); });
+test('unknown prices stay unknown and free is explicit', () => { assert.equal(priceLabel(normalizeEvent(fixture).price), 'Price unknown'); assert.equal(priceLabel({ kind: 'free' }), 'Free'); });
 test('merging the same URL updates date, not duplicate; separate series URLs remain', () => {
   const values = mergeEvents([fixture], [{ ...fixture, startAt: '2026-10-28T18:00:00+01:00', verifiedAt: '2026-10-22T12:00:00Z' }], [{ ...fixture, id: 'b', url: 'https://luma.com/meetup-2' }]);
   assert.equal(values.length, 2); assert.equal(values[0].startAt, '2026-10-28T17:00:00.000Z');
+});
+test('newer observations keep the original ID and preserve saved choices', () => {
+  const first = { ...fixture, id: 'manual-id', verifiedAt: null };
+  const updated = { ...fixture, id: 'source-id', startAt: '2026-10-28T18:00:00+01:00', status: 'cancelled' };
+  const merged = mergeEvents([first], [updated]);
+  assert.equal(merged.length, 1);
+  assert.equal(merged[0].id, 'manual-id');
+  assert.equal(merged[0].status, 'cancelled');
+  assert.equal(selectEvents(merged, { now: new Date('2026-10-21T12:00:00Z'), saved: true, decisions: { 'manual-id': 'going' } }).length, 1);
 });
 test('filters city, online, date range, hidden decisions and saved selection', () => {
   const events = mergeEvents([fixture, { ...fixture, id: 'online', url: 'https://luma.com/online', mode: 'online' }, { ...fixture, id: 'other', url: 'https://luma.com/other', city: 'Berlin' }]);

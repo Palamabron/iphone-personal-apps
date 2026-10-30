@@ -60,21 +60,21 @@ struct RadarBrowser: UIViewRepresentable {
                     if let popover = sheet.popoverPresentationController { popover.sourceView = webView; popover.sourceRect = CGRect(x: 20, y: 20, width: 1, height: 1) }
                     var presenter = webView?.window?.rootViewController
                     while let next = presenter?.presentedViewController { presenter = next }
-                    guard let presenter else { complete(id, ["error": "Nie można otworzyć udostępniania."]); return }
+                    guard let presenter else { complete(id, ["error": "Could not open the share sheet."]); return }
                     presenter.present(sheet, animated: true) { self.complete(id, ["ok": true]) }
-                } catch { complete(id, ["error": "Nie udało się zapisać pliku do udostępnienia."]) }
+                } catch { complete(id, ["error": "Could not prepare the file for sharing."]) }
             } else if type == "fetch", let id = body["id"] as? String, id.count < 30,
                       let raw = body["url"] as? String, let url = URL(string: raw) {
                 guard url.scheme == "https", let host = url.host?.lowercased(), permittedHosts.contains(host),
                       url.user == nil, url.password == nil, url.port == nil || url.port == 443 else {
-                    complete(id, ["error": "Niedozwolony adres źródła."]); return
+                    complete(id, ["error": "Source URL not allowed."]); return
                 }
                 Task { [weak self] in
                     do {
                         let response = try await PublicPageReader().read(url)
                         await MainActor.run { self?.complete(id, response) }
                     } catch {
-                        await MainActor.run { self?.complete(id, ["error": "Nie udało się pobrać publicznej strony. Źródło może ograniczać odczyt."]) }
+                        await MainActor.run { self?.complete(id, ["error": "Could not fetch the public page. The source may restrict access."]) }
                     }
                 }
             }

@@ -16,7 +16,7 @@ const initialSnapshot = ${data};
 const nativeValues = {...(window.__RADAR_NATIVE_STATE__ || {})};
 const localStorage = {
   getItem: key => nativeValues[key] ?? null,
-  setItem: (key,value) => { value=String(value); if(new TextEncoder().encode(value).length>4_000_000) throw new Error('Zapis jest za duży. Wyeksportuj kopię.'); window.webkit.messageHandlers.radar.postMessage({type:'store',key,value}); nativeValues[key] = value; }
+  setItem: (key,value) => { value=String(value); if(new TextEncoder().encode(value).length>4_000_000) throw new Error('Storage limit reached. Export a backup.'); window.webkit.messageHandlers.radar.postMessage({type:'store',key,value}); nativeValues[key] = value; }
 };
 const pending = new Map(); let sequence = 0;
 window.__radarNativeComplete = (id, value) => { const call = pending.get(id); if(!call) return; pending.delete(id); call.cleanup(); value.error ? call.reject(new Error(value.error)) : call.resolve(value); };
@@ -41,11 +41,11 @@ const nativeFetch = async (input, options={}) => {
   if (route === './api/refresh') return new Response(JSON.stringify(await abortable(collectorModule.collectEvents({fetchImpl:sourceFetch,maxPages:28}),options.signal)), {headers:{'content-type':'application/json'}});
   if (route === './api/import') {
     const url = collectorModule.safeUrl(JSON.parse(options.body || '{}').url);
-    if (!url) return new Response(JSON.stringify({error:'Importuj publiczny link Luma/Evenea lub wpisz dane ręcznie.'}),{status:400});
+    if (!url) return new Response(JSON.stringify({error:'Import a public Luma/Evenea link or enter details manually.'}),{status:400});
     try { const page=await abortable(collectorModule.fetchPublicPage(url,{fetchImpl:sourceFetch}),options.signal); return new Response(JSON.stringify({events:collectorModule.parseEventPage(page.html,page.url,page.fetchedAt)})); }
-    catch(error) { if(options.signal?.aborted) throw error; const cached=initialSnapshot.events.find(event=>collectorModule.safeUrl(event.url)===url); return new Response(JSON.stringify(cached ? {events:[cached],warning:'Użyto wcześniejszego odczytu. Potwierdź termin u organizatora.'} : {error:'Źródło jest niedostępne. Dodaj potwierdzone dane ręcznie.'}),{status:cached?200:502}); }
+    catch(error) { if(options.signal?.aborted) throw error; const cached=initialSnapshot.events.find(event=>collectorModule.safeUrl(event.url)===url); return new Response(JSON.stringify(cached ? {events:[cached],warning:'Using earlier data. Confirm the date with the organizer.'} : {error:'Source unavailable. Add verified details manually.'}),{status:cached?200:502}); }
   }
-  if (!collectorModule.safeUrl(route)) throw new Error('Niedozwolony adres źródła.');
+  if (!collectorModule.safeUrl(route)) throw new Error('Source URL not allowed.');
   const response=await nativeCall('fetch',{url:route},options.signal);
   return new Response([204,205,304].includes(response.status)?null:response.body,{status:response.status,headers:response.headers});
 };
@@ -54,7 +54,7 @@ const fetch = nativeFetch;
 // Each module retains its own scope, sharing the exact parsers and UI with the web app.
 let app = await read('web/app.mjs');
 app = app.replace(/^import\s+\{([^}]+)\}\s+from\s+'\.\/lib\/core\.mjs';/, 'const {$1} = coreModule;');
-app = app.replace(/function download\(content, type, filename\) \{[\s\S]*?\n\}/, `function download(content, type, filename) { nativeCall('share',{content,mime:type,filename},AbortSignal.timeout(10000)).catch(()=>toast('Nie udało się otworzyć udostępniania. Spróbuj ponownie.')); }`);
+app = app.replace(/function download\(content, type, filename\) \{[\s\S]*?\n\}/, `function download(content, type, filename) { nativeCall('share',{content,mime:type,filename},AbortSignal.timeout(10000)).catch(()=>toast('Could not open the share sheet. Try again.')); }`);
 app = app.replace("if ('serviceWorker' in navigator", "if (!window.RADAR_NATIVE && 'serviceWorker' in navigator");
 const css = await read('web/styles.css');
 let html = await read('web/index.html');
@@ -62,7 +62,7 @@ html = html.replace(/<link[^>]*>/g, '').replace('<script type="module" src="./ap
 html = html.replace('</head>', `<style>${css}</style></head>`);
 const javascript = `${core}\n${collector}\n(() => {\n${bridge}\n${app}\n})();`.replace(/<\/script/gi, '<\\/script');
 html = html.replace('</body>', `<script>\n${javascript}\n</script></body>`).replace('class="brand" href="./"', 'class="brand" href="#"');
-html = html.replace('Na iPhonie otwórz w Safari → Udostępnij → Dodaj do ekranu początkowego. Bez App Store i abonamentu.', 'Dane i zapisane wybory zostają w tej aplikacji. Źródła odświeżysz przyciskiem powyżej.');
+html = html.replace('On iPhone, open in Safari → Share → Add to Home Screen.', 'Your saved choices stay in this app. Use Refresh sources to update events.');
 const output = path.join(root, 'build', 'ios', 'resources'); await mkdir(output, { recursive: true });
 await writeFile(path.join(output, 'radar.html'), html);
 console.log('Przygotowano build/ios/resources/radar.html: wspólny interfejs i kolektor, lokalny zapis natywny, bez serwera.');
