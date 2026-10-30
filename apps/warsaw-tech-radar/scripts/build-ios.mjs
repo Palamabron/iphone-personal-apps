@@ -3,9 +3,9 @@ import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 const root = fileURLToPath(new URL('../', import.meta.url));
-function run(command, args) { const result = spawnSync(command, args, { cwd: root, stdio: 'inherit' }); if (result.status !== 0) throw new Error('Nieudane polecenie: ' + command); }
+function run(command, args) { const result = spawnSync(command, args, { cwd: root, stdio: 'inherit' }); if (result.status !== 0) throw new Error('Command failed: ' + command); }
 run(process.execPath, ['scripts/prepare-ios.mjs']);
-if (process.platform !== 'darwin') throw new Error('HTML przygotowany. Kompilacja IPA wymaga macOS/Xcode; użyj ręcznego workflow lub własnego Maca.');
+if (process.platform !== 'darwin') throw new Error('HTML prepared. IPA compilation requires macOS/Xcode; use the manual workflow or your own Mac.');
 const output = path.join(root, 'build', 'ios'); await mkdir(output, { recursive: true });
 const work = await mkdtemp(path.join(output, 'radar-'));
 await cp(path.join(root, 'ios', 'RadarApp.swift'), path.join(work, 'RadarApp.swift'));
@@ -47,8 +47,8 @@ await writeFile(path.join(project, 'xcshareddata', 'xcschemes', 'TechRadar.xcsch
 const derived = path.join(work, 'DerivedData');
 run('xcodebuild', ['-project', project, '-scheme', 'TechRadar', '-configuration', 'Release', '-sdk', 'iphoneos', '-destination', 'generic/platform=iOS', '-derivedDataPath', derived, 'CODE_SIGNING_ALLOWED=NO', 'CODE_SIGNING_REQUIRED=NO', 'CODE_SIGN_IDENTITY=', 'build']);
 const products = path.join(derived, 'Build', 'Products', 'Release-iphoneos');
-const app = (await readdir(products)).find(name => name.endsWith('.app')); if (!app) throw new Error('Brak produktu .app.');
+const app = (await readdir(products)).find(name => name.endsWith('.app')); if (!app) throw new Error('No .app product found.');
 const payload = path.join(work, 'Payload'); await mkdir(payload); await cp(path.join(products, app), path.join(payload, app), { recursive: true });
 run('ditto', ['-c', '-k', '--keepParent', payload, path.join(output, 'TechRadar-unsigned.ipa')]);
-console.log('Gotowe: build/ios/TechRadar-unsigned.ipa. Podpisz własnym kontem przy instalacji w SideStore.');
+console.log('Built build/ios/TechRadar-unsigned.ipa. Sign it with your account during SideStore installation.');
 

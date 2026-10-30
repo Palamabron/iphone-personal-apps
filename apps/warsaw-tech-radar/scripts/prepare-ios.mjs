@@ -66,4 +66,4 @@ html = html.replace('<strong>Add to your home screen</strong>', '<strong>Your da
   .replace('On iPhone, open in Safari → Share → Add to Home Screen.', 'Your saved choices stay in this app. Use Refresh sources to update events.');
 const output = path.join(root, 'build', 'ios', 'resources'); await mkdir(output, { recursive: true });
 await writeFile(path.join(output, 'radar.html'), html);
-console.log('Przygotowano build/ios/resources/radar.html: wspólny interfejs i kolektor, lokalny zapis natywny, bez serwera.');
+console.log('Prepared build/ios/resources/radar.html: shared interface and collector, native local storage, no server.');

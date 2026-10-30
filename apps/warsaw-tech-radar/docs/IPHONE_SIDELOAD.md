@@ -1,26 +1,26 @@
-# Radar jako własna aplikacja iPhone
+# Radar as a standalone iPhone app
 
-Stan 21.10.2026: kompilacja Xcode aplikacji na iPhone'a i kontrola IPA przeszły. [Plik oraz instrukcja instalacji](https://github.com/Palamabron/iphone-personal-apps). Nie wykonano testu symulatora, podpisania SideStore ani instalacji na fizycznym iPhonie. Dotychczasowa aplikacja webowa pozostaje dostępną wersją.
+Status 21 October 2026: the Xcode iPhone build and IPA validation passed. [Package and installation instructions](https://github.com/Palamabron/iphone-personal-apps). Simulator, SideStore signing, and physical iPhone tests have not been performed. The existing web app remains available.
 
-## Co jest w źródłach
+## Source contents
 
-`ios/RadarApp.swift` tworzy samodzielną aplikację iOS z lokalnie dołączonym interfejsem radaru. Wygląd, reguły dopasowania i parsery są te same co w aplikacji webowej; nie jest to ponownie napisany od zera interfejs SwiftUI. Swift zapewnia powłokę, trwały zapis w UserDefaults, systemowe udostępnianie ICS/kopii JSON i odczyt publicznych źródeł przez URLSession. Aplikacja nie wymaga logowania do prywatnego hostingu Sites ani serwera.
+`ios/RadarApp.swift` creates a standalone iOS app with a locally bundled Radar interface. Appearance, matching rules and parsers are shared with the web app; the interface is not rewritten from scratch in SwiftUI. Swift provides the shell, persistent UserDefaults storage, system sharing of ICS/JSON backups, and public-source fetching via URLSession. The app requires neither a private Sites hosting login nor a server.
 
-Źródła pobierane są z sieci telefonu. Obowiązują te same ograniczenia: błędy/limity Luma i Evenea są raportowane, Facebook i LinkedIn pozostają ręcznym importem. Żądania mają jawnie ograniczoną listę hostów, limit 2 MB i timeout. Każde przekierowanie wraca do wspólnego kolektora do sprawdzenia. Nagłówki, cookies i sesje przeglądarki nie są kopiowane.
+Sources are fetched over the phone's network. The same limits apply: Luma and Evenea errors or rate limits are reported, while Facebook and LinkedIn require manual import. Requests use an explicit host allowlist, a 2 MB limit and a timeout. Each redirect returns to the shared collector for validation. Browser headers, cookies and sessions are not copied.
 
-Skrypt `node scripts/prepare-ios.mjs` przygotowuje samowystarczalny HTML na Windowsie lub Ubuntu. `node scripts/build-ios.mjs` na Macu z Xcode generuje projekt, buduje aplikację na urządzenie i tworzy `build/ios/TechRadar-unsigned.ipa`. Cel: iOS 18 lub nowszy. Ikona iOS jest dołączona. Zachowanie systemowego importu plików, zgłaszanie błędów eksportu, trwałość danych przy odnowieniu i dostęp do źródeł wymagają weryfikacji na urządzeniu.
+`node scripts/prepare-ios.mjs` prepares self-contained HTML on Windows or Ubuntu. On a Mac with Xcode, `node scripts/build-ios.mjs` generates the project, builds for a device, and creates `build/ios/TechRadar-unsigned.ipa`. The target is iOS 18 or later. An iOS icon is included. System file import, export error reporting, data persistence across renewal, and source access require device verification.
 
-Na Windowsie przeszło 20 testów logiki i `scripts/check-ios-ui.mjs`: samowystarczalny HTML otwarty w Chromium, zapis/odtworzenie przez testowy most, eksport ICS i JSON, import publicznego źródła, odrzucanie obcych adresów oraz zachowanie zapisanych wydarzeń po awarii kolektora. Nie jest to test kodu Swift, Safari ani iPhone'a. Skrypt testowy korzysta z opcjonalnego Playwright (`PLAYWRIGHT_MODULE`, `BROWSER_CHANNEL`).
+On Windows, 20 logic tests and `scripts/check-ios-ui.mjs` passed: the self-contained HTML was opened in Chromium with a mocked bridge, testing save/restore, ICS and JSON export, public-source import, rejection of external addresses, and preservation of saved events after collector failure. This is not a Swift, Safari, or iPhone test. The optional test uses Playwright (`PLAYWRIGHT_MODULE`, `BROWSER_CHANNEL`).
 
-## Bez dodatkowych opłat
+## No extra charges
 
-Workflow jest uruchamiany ręcznie i ma warunek blokujący job na prywatnych repozytoriach. Pierwotne repozytorium pozostaje prywatne. Za zgodą właściciela wybrane źródła przeniesiono do osobnego [publicznego repozytorium kompilacji](https://github.com/Palamabron/iphone-personal-apps) i wykonano bezpłatną kompilację na standardowym runnerze macOS. Nie zmieniono budżetów konta.
+The manually triggered workflow is guarded so its job does not run in private repositories. The original repository remains private. With the owner's consent, selected sources were moved to a separate [public build repository](https://github.com/Palamabron/iphone-personal-apps) and built without charge on a standard macOS runner. Account budgets were not changed.
 
-Publiczne repozytorium zawiera oczyszczone źródła budowania bez historii pierwotnych repozytoriów, prywatnego hostingu i danych preferencji. [Raport kompilacji](https://github.com/Palamabron/iphone-personal-apps/blob/main/docs/BUILD-VALIDATION.md) rozdziela kontrole pliku od testów wymagających iPhone'a.
+The public repository contains sanitized build sources without the original repositories' history, private hosting or preference data. The [build report](https://github.com/Palamabron/iphone-personal-apps/blob/main/docs/BUILD-VALIDATION.md) separates package checks from tests requiring an iPhone.
 
-Po udanej kompilacji użytkownik pobiera artefakt, rozpakowuje ZIP i podpisuje IPA w SideStore na własnym iPhonie. Instalację SideStore można przygotować na Windowsie/Ubuntu. Nie przekazuj hasła Apple Account ani pliku parowania do repozytorium lub tej rozmowy. SideStore zajmuje jeden z trzech slotów; Radar oraz Focus Tube mogą zająć pozostałe. Odnawianie przed upływem 7 dni jest nadal konieczne.
+After a successful build, download the artifact, unpack the ZIP, and sign the IPA in SideStore on your own iPhone. SideStore can be set up using Windows/Ubuntu. Do not share an Apple Account password or pairing file in the repository or this conversation. SideStore uses one of three slots; Radar and Focus Tube can occupy the other two. Renewal is still required before seven days have elapsed.
 
-## Źródła
+## Sources
 
 - https://docs.sidestore.io/docs/installation/prerequisites
 - https://docs.sidestore.io/docs/installation/install

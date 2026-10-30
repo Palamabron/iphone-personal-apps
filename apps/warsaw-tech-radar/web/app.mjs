@@ -30,7 +30,7 @@ function card(event) {
   const hours = `${time(event.startAt)}${event.endAt ? '–' + time(event.endAt) : ''}`;
   const place = event.venue || event.address || event.city || 'Venue to be confirmed';
   const address = event.venue && event.address && event.venue !== event.address ? event.address : (!event.venue && !event.address ? 'Check the exact location with the organizer' : '');
-  const description = event.description && !event.description.startsWith('Tematy rozpoznane w ogłoszeniu:') ? `<p>${esc(event.description)}</p>` : '';
+  const description = event.description && !['Tematy rozpoznane w ogłoszeniu:', 'Topics recognized in the announcement:'].some(prefix => event.description.startsWith(prefix)) ? `<p>${esc(event.description)}</p>` : '';
   return `<article class="event-card ${event.status === 'cancelled' ? 'cancelled' : ''}" data-event="${esc(event.id)}">
     <div class="event-top"><p class="event-time"><time datetime="${esc(event.startAt)}">${esc(hours)}</time></p><span class="price-label ${event.price.kind === 'free' ? 'free' : ''}">${esc(priceLabel(event.price))}</span></div>
     <h3><a href="${esc(event.url)}" target="_blank" rel="noopener noreferrer">${esc(event.title)}</a></h3>
@@ -84,10 +84,10 @@ $('#events').addEventListener('click', event => {
   const item = allEvents().find(e => e.id === article.dataset.event); if (!item) return;
   const decisionButton = event.target.closest('[data-decision]');
   if (decisionButton) { const choice = decisionButton.dataset.decision; if (state.decisions[item.id] === choice) delete state.decisions[item.id]; else state.decisions[item.id] = choice; state.savedEvents = mergeEvents(state.savedEvents, [item]).filter(e => ['going', 'maybe'].includes(state.decisions[e.id])); persist(); render(); if (choice === 'hidden') toast('Event hidden. You can restore it in data settings.'); }
-  if (event.target.closest('[data-calendar]')) download(makeIcs(item), 'text/calendar;charset=utf-8', 'wydarzenie.ics');
+  if (event.target.closest('[data-calendar]')) download(makeIcs(item), 'text/calendar;charset=utf-8', 'event.ics');
 });
 $('#interests').addEventListener('change', () => { state.interests = [...$('#interests').querySelectorAll('input:checked')].map(i => i.value); persist(); render(); });
-$('#export').addEventListener('click', () => download(JSON.stringify({ version: 1, exportedAt: new Date().toISOString(), ...state }, null, 2), 'application/json', 'warsaw-radar-kopia.json'));
+$('#export').addEventListener('click', () => download(JSON.stringify({ version: 1, exportedAt: new Date().toISOString(), ...state }, null, 2), 'application/json', 'warsaw-radar-backup.json'));
 $('#restore-hidden').addEventListener('click', () => { state.decisions = Object.fromEntries(Object.entries(state.decisions).filter(([, value]) => value !== 'hidden')); persist(); render(); toast('Hidden events restored.'); });
 $('#restore').addEventListener('change', async event => { const file = event.target.files[0]; if (!file) return; try { if (file.size > 2000000) throw new Error('Backup is too large'); const value = JSON.parse(await file.text()); if (value.version !== 1 || !value.decisions || !Array.isArray(value.customEvents)) throw new Error('Not a radar backup'); const imported = readState({ getItem: () => JSON.stringify(value) }); state = { decisions: { ...state.decisions, ...imported.decisions }, interests: imported.interests, customEvents: mergeEvents(state.customEvents, imported.customEvents), savedEvents: mergeEvents(state.savedEvents, imported.savedEvents) }; persist(); render(); toast('Backup restored.'); } catch (error) { toast(error.message || 'Could not read backup.'); } event.target.value = ''; });
 $('#refresh').addEventListener('click', async () => {

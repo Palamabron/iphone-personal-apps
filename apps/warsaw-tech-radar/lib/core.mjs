@@ -64,7 +64,7 @@ export function warsawDateTime(value) {
   if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(value)) return null;
   const approximate = Date.parse(value + ':00Z'); if (!Number.isFinite(approximate)) return null;
   const format = new Intl.DateTimeFormat('sv-SE', { timeZone: WARSAW, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
-  // Współczesna Warszawa: CET / CEST. Przy powtórzonej godzinie wybieramy wcześniejsze wystąpienie.
+  // Modern Warsaw uses CET / CEST. For a repeated hour, choose the earlier occurrence.
   const candidates = [120, 60].map(offset => new Date(approximate - offset * 60000));
   return candidates.find(date => format.format(date).replace(' ', 'T') === value)?.toISOString() || null;
 }
@@ -118,7 +118,7 @@ export function makeIcs(event, now = new Date()) {
     'UID:' + icsEscape(encodeURIComponent(event.id) + '@warsaw-tech-radar'), 'DTSTAMP:' + stamp(now), 'DTSTART:' + stamp(event.startAt)];
   if (event.endAt && Date.parse(event.endAt) > Date.parse(event.startAt)) lines.push('DTEND:' + stamp(event.endAt));
   lines.push('SUMMARY:' + icsEscape(event.title), 'LOCATION:' + icsEscape([event.venue, event.address || event.city].filter(Boolean).join(', ')), 'URL:' + event.url,
-    'DESCRIPTION:' + icsEscape((event.description || '') + '\nZapisy i aktualne informacje: ' + event.url));
+    'DESCRIPTION:' + icsEscape((event.description || '') + '\nRegistration and current information: ' + event.url));
   if (event.status === 'cancelled') lines.push('STATUS:CANCELLED');
   lines.push('END:VEVENT', 'END:VCALENDAR'); return lines.map(foldLine).join('\r\n') + '\r\n';
 }

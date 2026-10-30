@@ -110,7 +110,7 @@ function createEvent(raw, sourceUrl, fetchedAt) {
   const categories = classifyCategories([title, raw.description, joinNames(raw.organizer)].filter(Boolean).join(' '));
   // Store a short neutral classification instead of reproducing the organizer's full copy.
   const labels = { ai: 'AI / ML', startup: 'startupy', product: 'produkt i technologia', networking: 'networking', funding: 'finansowanie' };
-  const description = categories.length ? `Tematy rozpoznane w ogłoszeniu: ${categories.map(key => labels[key]).join(', ')}.` : null;
+  const description = categories.length ? `Topics recognized in the announcement: ${categories.map(key => labels[key]).join(', ')}.` : null;
   return {
     id: `event-${hash(url)}`, title, description, startAt, endAt,
     timezone: clean(raw.timezone, 80) || 'Europe/Warsaw', city, venue, address: fullAddress,
@@ -260,7 +260,7 @@ export async function fetchPublicPage(input, { fetchImpl = fetch, timeoutMs = TI
       let position = 0;
       for (const chunk of chunks) { buffer.set(chunk, position); position += chunk.byteLength; }
       const html = new TextDecoder().decode(buffer);
-      if (/_cf_chl_opt|cf-chl-widget|<title>Just a moment/i.test(html)) throw new Error('Strona wymaga weryfikacji CAPTCHA / Cloudflare. Kolektor jej nie obchodzi.');
+      if (/_cf_chl_opt|cf-chl-widget|<title>Just a moment/i.test(html)) throw new Error('The page requires CAPTCHA / Cloudflare verification. The collector does not bypass it.');
       return { html, url, fetchedAt: new Date().toISOString() };
     }
     throw new Error('Too many redirects.');
@@ -311,6 +311,6 @@ export async function collectEvents({ now = new Date().toISOString(), sources = 
   // Keep small concurrency so that refreshing from a phone does not burst requests.
   for (let i = 0; i < sources.length; i += 3) await Promise.all(sources.slice(i, i + 3).map(source => read(source, true)));
   const details = [...discovered].filter(url => !fetched.has(url)).slice(0, Math.max(0, maxPages - pages));
-  for (let i = 0; i < details.length; i += 3) await Promise.all(details.slice(i, i + 3).map(url => read({ name: 'Strona wydarzenia', url }, false)));
+  for (let i = 0; i < details.length; i += 3) await Promise.all(details.slice(i, i + 3).map(url => read({ name: 'Event page', url }, false)));
   return { version: 1, generatedAt: new Date().toISOString(), events: [...events.values()].sort((a, b) => a.startAt.localeCompare(b.startAt) || a.title.localeCompare(b.title)), sources: reports };
 }

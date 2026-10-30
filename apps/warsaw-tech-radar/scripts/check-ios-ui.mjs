@@ -28,7 +28,7 @@ try {
       if (message.type === 'fetch') {
         const fixture = { '@context': 'https://schema.org', '@type': 'Event', name: 'Test mostu iOS · AI meetup', url: 'https://luma.com/ios-bridge-test', startDate: new Date(Date.now() + 86400000 * 2).toISOString(), location: { '@type': 'Place', name: 'Sala testowa', address: { addressLocality: 'Warszawa' } }, isAccessibleForFree: true };
         const body = '<script type="application/ld+json">' + JSON.stringify(fixture) + '</' + 'script>';
-        setTimeout(() => window.__radarNativeComplete(message.id, window.__TEST_FAIL_NETWORK__ ? { error: 'Test niedostępnego źródła' } : { status: 200, headers: { 'content-type': 'text/html' }, body }));
+        setTimeout(() => window.__radarNativeComplete(message.id, window.__TEST_FAIL_NETWORK__ ? { error: 'Test source unavailable' } : { status: 200, headers: { 'content-type': 'text/html' }, body }));
       }
     } } } };
   });
@@ -50,11 +50,11 @@ try {
   await page.getByRole('button', { name: /Calendar/ }).click();
   await page.waitForFunction(() => window.__TEST_MESSAGES__.some(message => message.type === 'share'));
   const calendar = await page.evaluate(() => window.__TEST_MESSAGES__.find(message => message.type === 'share'));
-  assert.equal(calendar.filename, 'wydarzenie.ics');
+  assert.equal(calendar.filename, 'event.ics');
   assert.match(calendar.content, /BEGIN:VCALENDAR/);
   await page.getByText('Your interests and data', { exact: true }).click();
   await page.getByRole('button', { name: 'Export my data', exact: true }).click();
-  const backup = await page.evaluate(() => window.__TEST_MESSAGES__.find(message => message.filename === 'warsaw-radar-kopia.json'));
+  const backup = await page.evaluate(() => window.__TEST_MESSAGES__.find(message => message.filename === 'warsaw-radar-backup.json'));
   assert.equal(Object.values(JSON.parse(backup.content).decisions).includes('going'), true);
   await page.getByRole('button', { name: '＋ Add event' }).click();
   await page.locator('#import-url').fill('https://luma.com/ios-bridge-test');

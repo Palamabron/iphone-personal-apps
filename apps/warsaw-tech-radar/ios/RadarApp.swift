@@ -49,7 +49,7 @@ struct RadarBrowser: UIViewRepresentable {
                 UserDefaults.standard.set(value, forKey: "native." + key)
             } else if type == "share", let value = body["content"] as? String, value.utf8.count <= 4_000_000,
                       let id = body["id"] as? String, id.count < 30,
-                      let filename = body["filename"] as? String, ["wydarzenie.ics", "warsaw-radar-kopia.json"].contains(filename) {
+                      let filename = body["filename"] as? String, ["event.ics", "warsaw-radar-backup.json"].contains(filename) {
                 do {
                     let folder = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
                     try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)

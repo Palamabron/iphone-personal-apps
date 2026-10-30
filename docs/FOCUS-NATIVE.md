@@ -1,27 +1,27 @@
 # Focus Tube Native 0.2.0
 
-Samodzielna aplikacja, odrębna od rozszerzenia Safari 0.1.1. Identyfikator `dev.palamabron.focustube.native`. Natywny ekran startowy SwiftUI, wyszukiwarka, zapis do 100 linków lokalnie, powrót, odświeżanie, subskrypcje i wybór konta. Wyniki i oficjalny odtwarzacz YouTube działają w WKWebView wewnątrz aplikacji, bez przechodzenia do Safari. To nie jest w pełni natywny klon wszystkich ekranów YouTube.
+A standalone app, separate from the Safari extension 0.1.1, with bundle identifier `dev.palamabron.focustube.native`. Its SwiftUI home screen includes search, local storage for up to 100 links, back and refresh controls, subscriptions and account selection. Results and the official YouTube player run inside the app in WKWebView, without switching to Safari. This is not a fully native clone of every YouTube screen.
 
-Wbudowany filtr ukrywa rozpoznane Shortsy i rekomendacje, porcjuje wyniki po 15 oraz ogranicza autoplay. Filtr działa również przy zmianie adresu bez przeładowania. Nie ma przełącznika wyłączającego filtrowanie. Widok YouTube pozostaje zasłonięty, jeżeli filtr nie potwierdzi aktywacji. Osobna kontrola natywna blokuje nawigację do Shorts oraz obcych hostów; dopuszcza YouTube i konkretne hosty logowania/zgód Google. Treści osadzonych ramek i media obsługuje WebKit. Nie stosujemy podmiany User-Agent, ekstrakcji strumieni ani kopiowania sesji Safari. Cookies w domyślnym magazynie WebKit zachowują sesję między uruchomieniami.
+The built-in filter hides recognized Shorts and recommendations, limits results to batches of 15, and restricts autoplay. It also runs during navigation without page reloads. There is no filter-disable switch. The YouTube view remains covered unless the filter confirms activation. A separate native navigation policy blocks Shorts and unapproved hosts, while permitting YouTube and selected Google sign-in and consent hosts. WebKit handles embedded frames and media. The app does not spoof the User-Agent, extract streams, or copy Safari sessions. Cookies in WebKit's default store retain the session between launches.
 
-## Instalacja
+## Installation
 
-Pobierz **FocusTubeNative-unsigned.ipa** z wydania `focus-native-0.2.0`, następnie otwórz SideStore → My Apps → + i wybierz pobrany plik. Samo pobranie pliku nie instaluje aplikacji. Wpisuj dane Apple wyłącznie w narzędziu instalacyjnym. Szczegóły konfiguracji SideStore dla Windows/Ubuntu: [INSTALL_IPHONE.md](INSTALL_IPHONE.md).
+Download **FocusTubeNative-unsigned.ipa** from release `focus-native-0.2.0`, then open SideStore → My Apps → + and select the downloaded file. Downloading alone does not install the app. Enter Apple credentials only in the installation tool. For Windows/Ubuntu SideStore setup, see [INSTALL_IPHONE.md](INSTALL_IPHONE.md).
 
-Starszy Focus Tube z rozszerzeniem Safari jest osobną aplikacją. Przy limicie trzech aplikacji (SideStore również zajmuje miejsce) zdezaktywuj stare rozszerzenie, zanim zainstalujesz wersję Native razem z Tech Radarem. Nie musisz usuwać Userscripts z App Store.
+The older Focus Tube Safari extension is a separate app. With the three-app limit, which includes SideStore, deactivate the old extension before installing Native alongside Tech Radar. You do not need to remove Userscripts from the App Store.
 
-## Pierwsza próba
+## First test
 
-1. Otwórz aplikację i wyszukaj długi film. Rozpocznij odtwarzanie ręcznie.
-2. Zapisz film ikoną zakładki, wróć ikoną domu, otwórz zapis i sprawdź go po ponownym uruchomieniu.
-3. Wejdź w Konto. Sprawdź logowanie na konto z Premium i ponowne uruchomienie bez utraty sesji. Google może odmówić logowania w osadzonej przeglądarce; aplikacja tego nie obchodzi.
-4. Sprawdź brak Shorts, świadome ładowanie kolejnych 15 wyników oraz brak samoczynnego przejścia do następnego filmu.
-5. Osobno sprawdź pełny ekran, Premium, PiP i blokadę ekranu. Nie są jeszcze potwierdzone. Pobieranie offline nie jest dostępne.
+1. Open the app, search for a long video, and start playback manually.
+2. Save a video using the bookmark, return home, open the saved item, and check it after restarting the app.
+3. Open Account. Test sign-in to the Premium account and check whether the session survives a restart. Google may refuse sign-in in an embedded browser; the app does not bypass this.
+4. Check that Shorts are absent, subsequent batches of 15 require a deliberate action, and the next video does not start automatically.
+5. Test fullscreen, Premium, picture in picture and screen lock separately. They remain unverified. Offline downloads are unavailable.
 
-Nie blokuje oficjalnej aplikacji YouTube, usuwania aplikacji ani ustawień telefonu. Nie wszystkie filmy Shorts rozpoznajemy, jeśli są udostępnione jako zwykły adres `/watch`.
+The app does not block the official YouTube app, app removal, or device settings. Not every Short shared as a regular `/watch` link can be recognized.
 
-## Odtworzenie kompilacji
+## Reproducing the build
 
-Workflow **Build Focus Tube Native** w publicznym repozytorium uruchamia testy URL w Swift i testy filtra, kompiluje IPA dla iPhoneOS/ARM64 i osobno aplikację symulatora. Bez kont Apple i bez płatnego runnera. Lokalnie na macOS: `node scripts/build-native-ios.mjs`. Windows pozwala rozwijać kod i instalować gotową paczkę; nie kompiluje iOS.
+The public **Build Focus Tube Native** workflow runs Swift URL-policy and filter tests, builds an iPhoneOS/ARM64 IPA, and separately builds the simulator app. It uses no Apple account or paid runner. On macOS run `node scripts/build-native-ios.mjs`. Windows can be used to develop code and install the package, but cannot compile iOS.
 
-Aktualne wyniki prób są w [BUILD-VALIDATION.md](BUILD-VALIDATION.md). Zrzut symulatora nie potwierdza logowania ani Premium na urządzeniu.
+See [BUILD-VALIDATION.md](BUILD-VALIDATION.md) for test evidence. A simulator screenshot does not establish that sign-in or Premium works on a device.

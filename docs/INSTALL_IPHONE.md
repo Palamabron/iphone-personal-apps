@@ -1,37 +1,37 @@
-# Instalacja na własnym iPhonie
+# Installation on your iPhone
 
-Wymagany iOS 18 lub nowszy, własny Apple Account, Wi-Fi i kabel USB do pierwszej instalacji SideStore. Windows lub Ubuntu wystarcza; prywatny Mac i płatne konto Apple Developer nie są potrzebne. Pliki IPA są niepodpisane — SideStore podpisze je Twoim kontem przy instalacji.
+Requirements: iOS 18 or later, your own Apple Account, Wi-Fi, and a USB cable for initial SideStore setup. Windows or Ubuntu is sufficient; a personal Mac and paid Apple Developer account are not required. The IPA files are unsigned; SideStore signs them with your account during installation.
 
-## 1. Przygotuj SideStore
+## 1. Set up SideStore
 
-Postępuj według aktualnych oficjalnych instrukcji: [przygotowanie Windowsa/Ubuntu](https://docs.sidestore.io/docs/installation/prerequisites), następnie [instalacja SideStore](https://docs.sidestore.io/docs/installation/install).
+Follow the current official [Windows/Ubuntu prerequisites](https://docs.sidestore.io/docs/installation/prerequisites) and [SideStore installation guide](https://docs.sidestore.io/docs/installation/install).
 
-Na Windowsie obejmuje to instalację iTunes lub obsługiwanych sterowników Apple oraz programu iloader. Na Ubuntu potrzebny jest usbmuxd i iloader. Na iPhonie zainstaluj LocalDevVPN z App Store. Podłącz telefon przez USB, zaakceptuj zaufanie do komputera i w iloader wybierz instalację stabilnego SideStore.
+Windows requires iTunes or supported Apple drivers and iloader. Ubuntu requires usbmuxd and iloader. Install LocalDevVPN from the iPhone App Store. Connect the phone over USB, trust the computer when prompted, and select the stable SideStore installation in iloader.
 
-Na telefonie zaufaj własnemu profilowi w Ustawienia → Ogólne → VPN i zarządzanie urządzeniami. Włącz Ustawienia → Prywatność i ochrona → Tryb dewelopera i wykonaj wymagany restart. Połącz LocalDevVPN, otwórz SideStore i najpierw odśwież sam SideStore, klikając jego licznik dni w My Apps. Dokładne komunikaty zależą od wersji iOS.
+On the phone, trust your profile in Settings → General → VPN & Device Management. Enable Settings → Privacy & Security → Developer Mode and perform the required restart. Connect LocalDevVPN, open SideStore and first refresh SideStore itself by tapping its day counter in My Apps. Prompts vary by iOS version.
 
-## 2. Pobierz i zainstaluj aplikacje
+## 2. Download and install the apps
 
-Pobierz pliki `FocusTube-unsigned.ipa` oraz `TechRadar-unsigned.ipa` z [najnowszego wydania](https://github.com/Palamabron/iphone-personal-apps/releases/latest), najlepiej bezpośrednio w Safari na iPhonie. Zostaną zapisane w Plikach, zwykle w Pobranych.
+Download `FocusTube-unsigned.ipa` and `TechRadar-unsigned.ipa` from the [latest release](https://github.com/Palamabron/iphone-personal-apps/releases/latest), preferably in Safari on the iPhone. They are saved in Files, usually under Downloads.
 
-W SideStore otwórz My Apps, wybierz dodawanie aplikacji przyciskiem „+” i wskaż pobrany plik `.ipa`. Powtórz dla drugiej aplikacji. Podczas instalacji/odnawiania wymagane jest Wi-Fi i połączony LocalDevVPN. Nazwy konta i hasło wpisuj w narzędziach instalacyjnych, nigdy w repozytorium lub na stronie aplikacji.
+In SideStore, open My Apps, tap “+” and select the `.ipa` file. Repeat for the other app. Installation and renewal require Wi-Fi and a connected LocalDevVPN. Enter your account name and password only in installation tools, never in the repository or the app website.
 
-Pierwsza instalacja na rzeczywistym iPhonie pozostaje do potwierdzenia. Powodzenie kompilacji oraz kontroli pliku nie potwierdza podpisania go na konkretnym koncie Apple.
+The first installation on a physical iPhone remains unverified. A successful build and package inspection do not prove signing will succeed with a particular Apple Account.
 
-## 3. Uruchom Radar
+## 3. Open Radar
 
-Otwórz Tech Radar z ekranu telefonu. Wydarzenia i zapisane wybory są wewnątrz tej aplikacji; nie musisz logować się do hostingu strony. Przycisk „Odśwież źródła” czyta publiczne strony z sieci telefonu. Jeśli źródło ogranicza odczyt, zobaczysz raport, a wcześniejsze dane pozostaną dostępne. Facebook i LinkedIn nadal wymagają ręcznego dodawania.
+Open Tech Radar from the home screen. Events and saved choices are stored inside the app; no website hosting login is needed. “Refresh sources” reads public pages using the phone's network. If a source restricts access, the report shows the problem and earlier data remains available. Facebook and LinkedIn listings still require manual import.
 
-Aby przenieść zapisane wybory z wersji webowej: w poprzednim Radarze rozwiń „Twoje zainteresowania i dane”, wybierz „Eksportuj moje dane”, a w nowej aplikacji „Przywróć kopię” i wskaż JSON. Nie usuwaj poprzedniej kopii przed sprawdzeniem importu.
+To transfer choices from the web version, expand “Your interests and data”, select “Export my data”, then select “Restore backup” in the new app and choose the JSON file. Keep the old copy until the import has been checked.
 
-## 4. Włącz Focus Tube w Safari
+## 4. Enable the Focus Tube Safari extension
 
-Otwórz Focus Tube i przejdź instrukcję. W Ustawienia → Aplikacje → Safari → Rozszerzenia włącz Focus Tube i zezwól na dostęp do YouTube. Jeśli masz działający skrypt Focus Tube w Userscripts, pozostaw aktywną tylko jedną kopię filtra.
+Open Focus Tube and follow the instructions. Under Settings → Apps → Safari → Extensions, enable Focus Tube and allow access to YouTube. If the Focus Tube Userscripts script is already active, keep only one copy of the filter enabled.
 
-W zwykłej karcie Safari wpisz `m.youtube.com`. Zielona wyszukiwarka albo napis „filtr aktywny” potwierdzi działanie. Zmiana konta jest pod „Zmień konto”. Konto YouTube pozostaje w Safari; oficjalna aplikacja YouTube jest poza zakresem filtra. Premium, odtwarzanie w tle i PiP wymagają sprawdzenia na telefonie.
+Enter `m.youtube.com` in a regular Safari tab. The green search screen or “filter active” label confirms activation. Use “Switch account” to change accounts. The YouTube account remains in Safari; the official YouTube app is outside the filter's scope. Premium, background playback and PiP need device testing.
 
-## Odnawianie
+## Renewal
 
-Darmowe podpisanie wygasa po 7 dniach. Przed upływem terminu otwórz SideStore na Wi-Fi, połącz LocalDevVPN i odśwież aplikacje. Nie polegaj wyłącznie na odświeżaniu w tle. Nie usuwaj aplikacji przy zwykłym odnawianiu; Radar pozwala dodatkowo wyeksportować dane.
+Free signing expires after seven days. Before expiry, open SideStore on Wi-Fi, connect LocalDevVPN and refresh the apps. Do not rely solely on background refresh. Do not remove apps during normal renewal; Radar also allows data export.
 
-Standardowy limit to trzy aktywne aplikacje podpisane darmowym kontem, wliczając SideStore. SideStore, Focus Tube i Tech Radar zajmują te trzy miejsca. Rozszerzenie Safari zużywa również osobny App ID. [Limity i odnawianie SideStore](https://docs.sidestore.io/docs/faq).
+The standard limit is three active apps signed with a free account, including SideStore. SideStore, Focus Tube and Tech Radar fill those three slots. The Safari extension also uses a separate App ID. See [SideStore limits and renewal](https://docs.sidestore.io/docs/faq).

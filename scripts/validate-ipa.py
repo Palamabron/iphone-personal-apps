@@ -43,7 +43,7 @@ for argument in sys.argv[1:]:
             assert set(manifest['content_scripts'][0]['matches']) == {'https://youtube.com/*', 'https://m.youtube.com/*', 'https://www.youtube.com/*'}
             assert 'Switch account' in archive.read(folder + '/content.js').decode()
             host_html = archive.read(app + '/Base.lproj/Main.html').decode()
-            assert 'lang="pl"' in host_html and 'Rozszerzenia' in host_html
+            assert 'lang="en"' in host_html and 'Extensions' in host_html
             extensions.append(extension['CFBundleIdentifier'])
         else:
             assert info['CFBundleIdentifier'] == 'dev.palamabron.warsawtechradar'

@@ -1,35 +1,35 @@
-# iPhone bez prywatnego Maca
+# iPhone without a personal Mac
 
-Stan: 21.10.2026. Kompilacja Xcode aplikacji i rozszerzenia oraz kontrola pakietu IPA przeszły. [Pobierz plik i instrukcję](https://github.com/Palamabron/iphone-personal-apps). Podpisanie SideStore, symulator i fizyczny iPhone pozostają do sprawdzenia. Oryginalne repozytorium zachowano prywatne; wybrane źródła opublikowano za zgodą właściciela w osobnym repozytorium.
+Status: 21 October 2026. The Xcode app and extension build and IPA validation passed. [Download the package and instructions](https://github.com/Palamabron/iphone-personal-apps). SideStore signing, simulator and physical iPhone tests remain outstanding. The original repository remains private; selected sources were published in a separate repository with the owner's consent.
 
-## Wybrany wariant Focus Tube
+## Selected Focus Tube option
 
-Własna aplikacja iOS zawierająca rozszerzenie Safari, zbudowana z tego samego filtra co Userscripts. Instalacja IPA zastępuje instalowanie menedżera Userscripts i ręczne przenoszenie pliku JavaScript. Oglądanie nadal odbywa się w Safari, dzięki czemu pozostaje w tej samej sesji konta YouTube. Nie jest to własny odtwarzacz wewnątrz aplikacji ani nakładka na oficjalny YouTube.
+A custom iOS app containing a Safari extension, built from the same filter as Userscripts. Installing the IPA replaces the Userscripts manager and manual JavaScript file transfer. Viewing remains in Safari and therefore uses the same YouTube account session. This is not an in-app video player or an overlay for the official YouTube app.
 
-Packager Xcode generuje kontener aplikacji oraz rozszerzenie. Gotowy pakiet ma polski ekran konfiguracji i ikony. Trzeba sprawdzić na telefonie podpisanie rozszerzenia przez SideStore, jego uruchomienie oraz działanie kontekstu MAIN w docelowej wersji Safari. Nie deklarujemy, że sama kompilacja potwierdzi działanie Premium. [Raport kompilacji i znane ostrzeżenie generatora](https://github.com/Palamabron/iphone-personal-apps/blob/main/docs/BUILD-VALIDATION.md).
+The Xcode packager generates an app container and extension. The package has a Polish setup screen and icons. The phone must be used to verify SideStore signing of the extension, launch, and the MAIN context in the target Safari version. Compilation alone does not establish Premium support. [Build report and known generator warning](https://github.com/Palamabron/iphone-personal-apps/blob/main/docs/BUILD-VALIDATION.md).
 
-## Kompilacja bez firmowego MacBooka
+## Building without a company MacBook
 
-- `node scripts/build-ios.mjs` działa na macOS z Xcode. Tworzy projekt w nowym, lokalnym folderze `build/ios/`, kompiluje dla urządzenia i pakuje niepodpisane IPA.
-- Workflow `iPhone IPA (zero paid runners)` korzysta ze standardowego `macos-15` w GitHub Actions i uruchamia się wyłącznie ręcznie.
-- Dopóki repozytorium jest prywatne, zadanie jest celowo pomijane. Nie uruchomiono płatnych minut i nie zmieniono widoczności repozytorium.
-- W publicznym repozytorium standardowe runnery są bezpłatne według bieżących zasad GitHuba. Zmiana widoczności wymaga decyzji użytkownika; można również przygotować osobne publiczne repozytorium z samymi oczyszczonymi źródłami kompilacji, bez historii.
-- Alternatywa prywatna: własny runner macOS albo zweryfikowany bezpłatny limit Actions i twardy limit wydatków konta. Nie ustawiamy budżetów całego konta bez zgody.
+- `node scripts/build-ios.mjs` runs on macOS with Xcode. It creates a project in a new local `build/ios/` folder, builds for a device, and packages an unsigned IPA.
+- The `iPhone IPA (zero paid runners)` workflow uses standard `macos-15` in GitHub Actions and runs only when manually triggered.
+- While the repository is private, the job is intentionally skipped. No paid minutes were used and repository visibility was not changed.
+- Standard runners are free in public repositories under GitHub's current rules. Changing visibility requires the user's decision; a separate public repository containing only sanitized build sources and no history is another option.
+- Private alternatives include a self-hosted macOS runner or a verified free Actions allowance and hard spending limit. Do not set account-wide budgets without consent.
 
-Żadne Apple ID, hasło, certyfikat ani profil nie trafiają do GitHuba. Podpisanie odbywa się przy instalacji przez użytkownika.
+No Apple ID, password, certificate, or provisioning profile is sent to GitHub. The user signs the package during installation.
 
-## Instalacja gotowego IPA
+## Installing the IPA
 
-1. Na własnym Windowsie lub Ubuntu zainstaluj SideStore zgodnie z jego oficjalną instrukcją, początkowo przez USB.
-2. Na iPhonie włącz wymagany tryb dewelopera i zatwierdź własny profil. Aktualna instrukcja SideStore korzysta z LocalDevVPN i Wi-Fi.
-3. Pobierz artefakt IPA z udanej kompilacji, rozpakuj ZIP artefaktu i zaimportuj `.ipa` w SideStore. Podpisanie wymaga Twojego Apple Account; nie podawaj hasła w tej rozmowie.
-4. W ustawieniach Safari włącz rozszerzenie Focus Tube i nadaj dostęp do YouTube. Przed użyciem wyłącz starą kopię tego samego filtra w Userscripts, aby dwa filtry nie konkurowały.
-5. Odnawiaj aplikację przed upływem 7 dni. Automatyczne odnawianie nie jest gwarancją. SideStore zajmuje jeden z trzech standardowych slotów aplikacji; Focus Tube i Radar zajęłyby pozostałe dwa. Rozszerzenie zużywa też własny App ID.
+1. Install SideStore on your Windows or Ubuntu computer using its official guide, initially over USB.
+2. Enable Developer Mode and trust your profile on the iPhone. Current SideStore instructions use LocalDevVPN and Wi-Fi.
+3. Download the IPA artifact from a successful build, unpack the artifact ZIP, and import the `.ipa` in SideStore. Signing requires your Apple Account; do not share the password in this conversation.
+4. Enable the Focus Tube extension in Safari settings and allow access to YouTube. Disable the old copy of the same filter in Userscripts first so the two filters do not conflict.
+5. Refresh the app before seven days have passed. Automatic renewal is not guaranteed. SideStore occupies one of the three standard app slots; Focus Tube and Radar would occupy the remaining two. The extension also consumes its own App ID.
 
-## Źródła
+## Sources
 
 - Apple Personal Team: https://developer.apple.com/help/account/basics/about-your-developer-account
-- Packager Safari: https://developer.apple.com/documentation/safariservices/packaging-a-web-extension-for-safari
-- GitHub Actions i koszty: https://docs.github.com/en/billing/concepts/product-billing/github-actions
-- Instalacja SideStore: https://docs.sidestore.io/docs/installation/install
-- Wymagania: https://docs.sidestore.io/docs/installation/prerequisites
+- Safari packager: https://developer.apple.com/documentation/safariservices/packaging-a-web-extension-for-safari
+- GitHub Actions and costs: https://docs.github.com/en/billing/concepts/product-billing/github-actions
+- SideStore installation: https://docs.sidestore.io/docs/installation/install
+- Prerequisites: https://docs.sidestore.io/docs/installation/prerequisites

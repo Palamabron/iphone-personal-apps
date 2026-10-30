@@ -5,10 +5,10 @@ import path from 'node:path';
 import { VERSION } from '../src/core.js';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
-if (process.platform !== 'darwin') throw new Error('Budowanie IPA wymaga macOS z Xcode. Windows/Ubuntu mogą przygotować źródła i zainstalować gotowe IPA przez SideStore.');
+if (process.platform !== 'darwin') throw new Error('Building an IPA requires macOS with Xcode. Windows/Ubuntu can prepare sources and install the resulting IPA through SideStore.');
 function run(command, args, capture = false) {
   const result = spawnSync(command, args, { cwd: root, encoding: 'utf8', stdio: capture ? 'pipe' : 'inherit' });
-  if (result.status !== 0) throw new Error(`${command} zakończył się błędem; zobacz log kompilacji.`);
+  if (result.status !== 0) throw new Error(`${command} failed; see the build log.`);
   return result.stdout;
 }
 run(process.execPath, ['scripts/build.mjs', '--extension-only']);
@@ -18,7 +18,7 @@ const extension = path.join(work, 'extension'); await cp(path.join(root, 'dist',
 // Safari's packager creates the signed-app container and extension targets. No Apple credentials are used in CI.
 const manifest = JSON.parse(await readFile(path.join(extension, 'manifest.json'), 'utf8'));
 manifest.name = 'Focus Tube';
-manifest.description = 'YouTube w Safari bez Shortsów i nieskończonego przewijania.';
+manifest.description = 'YouTube in Safari without Shorts or endless scrolling.';
 // The filter hooks YouTube's page-level SPA history, rather than an isolated content world.
 manifest.content_scripts[0].world = 'MAIN';
 manifest.icons = { 128: 'icon-128.png', 512: 'icon-512.png', 1024: 'icon-1024.png' };
@@ -33,18 +33,18 @@ async function locate(folder, suffix) {
     if (entry.isDirectory()) { const found = await locate(target, suffix); if (found) return found; }
   }
 }
-const project = await locate(work, '.xcodeproj'); if (!project) throw new Error('Packager nie utworzył projektu Xcode.');
+const project = await locate(work, '.xcodeproj'); if (!project) throw new Error('The packager did not create an Xcode project.');
 const mainPage = await locate(path.dirname(project), 'Main.html');
-if (!mainPage) throw new Error('Brak ekranu konfiguracji rozszerzenia.');
+if (!mainPage) throw new Error('The extension setup screen is missing.');
 await cp(path.join(root, 'ios', 'Main.html'), mainPage);
 await cp(path.join(root, 'ios', 'Style.css'), path.join(path.dirname(path.dirname(mainPage)), 'Style.css'));
 const schemes = JSON.parse(run('xcodebuild', ['-list', '-json', '-project', project], true)).project.schemes;
 const scheme = schemes.find(name => /iOS/i.test(name) && !/Extension/i.test(name)) || schemes.find(name => !/Extension/i.test(name));
-if (!scheme) throw new Error('Nie znaleziono schematu aplikacji iOS.');
+if (!scheme) throw new Error('No iOS app scheme was found.');
 const derived = path.join(work, 'DerivedData');
 run('xcodebuild', ['-project', project, '-scheme', scheme, '-configuration', 'Release', '-sdk', 'iphoneos', '-destination', 'generic/platform=iOS', '-derivedDataPath', derived, 'CODE_SIGNING_ALLOWED=NO', 'CODE_SIGNING_REQUIRED=NO', 'CODE_SIGN_IDENTITY=', 'IPHONEOS_DEPLOYMENT_TARGET=18.0', `MARKETING_VERSION=${VERSION}`, 'CURRENT_PROJECT_VERSION=2', 'build']);
 const products = path.join(derived, 'Build', 'Products', 'Release-iphoneos');
-const app = (await readdir(products)).find(name => name.endsWith('.app')); if (!app) throw new Error('Brak skompilowanej aplikacji .app.');
+const app = (await readdir(products)).find(name => name.endsWith('.app')); if (!app) throw new Error('The compiled .app is missing.');
 const payload = path.join(work, 'Payload'); await mkdir(payload); await cp(path.join(products, app), path.join(payload, app), { recursive: true });
 run('ditto', ['-c', '-k', '--keepParent', payload, path.join(output, 'FocusTube-unsigned.ipa')]);
-console.log('Gotowe: build/ios/FocusTube-unsigned.ipa. Plik wymaga podpisania własnym kontem w SideStore/AltStore.');
+console.log('Built build/ios/FocusTube-unsigned.ipa. Sign it with your own account in SideStore/AltStore.');

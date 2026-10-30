@@ -10,10 +10,10 @@ if (!process.argv.includes('--extension-only')) await cp(path.join(project, "sit
 const core = (await readFile(path.join(project, "src/core.js"), "utf8")).replace(/^export /gm, "");
 const filter = (await readFile(path.join(project, "src/filter.js"), "utf8")).replace(/^import .*;\r?\n/gm, "").replace(/^export /gm, "");
 const header = `// ==UserScript==
-// @name         Focus Tube — YouTube bez Shortsów
+// @name         Focus Tube — YouTube without Shorts
 // @namespace    focus-tube.local
 // @version      ${VERSION}
-// @description  Bez Shortsów, polecanego feedu i automatycznego przewijania. Natywny odtwarzacz YouTube.
+// @description  Without Shorts, recommendations or endless scrolling. Uses the YouTube player.
 // @match        https://youtube.com/*
 // @match        https://www.youtube.com/*
 // @match        https://m.youtube.com/*
@@ -33,8 +33,8 @@ await mkdir(path.join(dist, "extension"), { recursive: true });
 await writeFile(path.join(dist, "extension/content.js"), `(function () {\n"use strict";\n${core}\n${filter}\n${boot}\n})();\n`);
 await writeFile(path.join(dist, "extension/manifest.json"), JSON.stringify({
   manifest_version: 3, name: "Focus Tube", version: VERSION,
-  description: "YouTube bez Shortsów i rekomendowanego feedu. Wersja developerska do testów desktopowych.",
+  description: "YouTube without Shorts or the recommendation feed. Developer build for desktop testing.",
   content_scripts: [{ matches: ["https://youtube.com/*", "https://www.youtube.com/*", "https://m.youtube.com/*"], js: ["content.js"], run_at: "document_start", world: "MAIN" }]
 }, null, 2));
-await writeFile(path.join(dist, "extension/README.txt"), "Wersja do testów Chrome/Edge: Rozszerzenia → Tryb dewelopera → Załaduj rozpakowane → ten folder. Na iPhonie użyj Userscripts i focus-tube.user.js; tego folderu nie da się bezpośrednio zainstalować w iOS.\n");
-console.log(`Focus Tube ${VERSION}: dist/ gotowe, skrypt ${Buffer.byteLength(bundle)} B.`);
+await writeFile(path.join(dist, "extension/README.txt"), "For Chrome/Edge testing: Extensions → Developer mode → Load unpacked → select this folder. On iPhone use Userscripts and focus-tube.user.js; this folder cannot be installed directly on iOS.\n");
+console.log(`Focus Tube ${VERSION}: dist/ ready, script ${Buffer.byteLength(bundle)} B.`);
