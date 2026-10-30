@@ -2,11 +2,18 @@ import SwiftUI
 import WebKit
 import UIKit
 
+private enum FocusTheme {
+    static let background = Color(red: 0.07, green: 0.14, blue: 0.11)
+    static let accent = Color(red: 0.84, green: 0.95, blue: 0.61)
+    static let surface = Color.white.opacity(0.08)
+    static let corner: CGFloat = 16
+}
+
 @main
 struct FocusApp: App {
     @StateObject private var browser = FocusBrowser()
     var body: some Scene {
-        WindowGroup { FocusScreen(browser: browser).preferredColorScheme(.dark).tint(Color(red: 0.84, green: 0.95, blue: 0.61)) }
+        WindowGroup { FocusScreen(browser: browser).preferredColorScheme(.dark).tint(FocusTheme.accent) }
     }
 }
 
@@ -54,12 +61,12 @@ final class FocusBrowser: NSObject, ObservableObject, WKNavigationDelegate, WKUI
     }
 
     func open(_ url: URL) {
-        guard FocusPolicy.allowed(url) else { message = "Ten adres jest zablokowany. Wklej link do zwykłego filmu YouTube."; return }
+        guard FocusPolicy.allowed(url) else { message = "This link is blocked. Paste a regular YouTube video link."; return }
         home = false; message = nil; ready = false; loading = true
         webView.load(URLRequest(url: url))
     }
     func submit(_ input: String) {
-        guard let url = FocusPolicy.destination(input) else { message = "Wpisz temat lub poprawny link do filmu. Linki Shorts są blokowane."; return }
+        guard let url = FocusPolicy.destination(input) else { message = "Enter a search or a video link. Shorts links are blocked."; return }
         open(url)
     }
     func goHome() {
@@ -67,13 +74,13 @@ final class FocusBrowser: NSObject, ObservableObject, WKNavigationDelegate, WKUI
         home = true
     }
     func saveCurrent() {
-        guard let url = webView.url, FocusPolicy.isYouTube(url), url.path == "/watch", !FocusPolicy.isShorts(url) else { message = "Otwórz film, aby zapisać go na później."; return }
+        guard let url = webView.url, FocusPolicy.isYouTube(url), url.path == "/watch", !FocusPolicy.isShorts(url) else { message = "Open a video to save it for later."; return }
         guard let id = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems?.first(where: { $0.name == "v" })?.value, FocusPolicy.validID(id) else { return }
         let canonical = "https://m.youtube.com/watch?v=" + id
         saved.removeAll { $0.url == canonical }
         saved.insert(SavedFilm(title: title.replacingOccurrences(of: " - YouTube", with: ""), url: canonical), at: 0)
         saved = Array(saved.prefix(100)); persist()
-        message = "Film zapisany na ekranie startowym."
+        message = "Saved for later."
     }
     func remove(_ film: SavedFilm) { saved.removeAll { $0.id == film.id }; persist() }
     private func persist() { if let data = try? JSONEncoder().encode(saved) { UserDefaults.standard.set(data, forKey: "focus.saved.v1") } }
@@ -82,7 +89,7 @@ final class FocusBrowser: NSObject, ObservableObject, WKNavigationDelegate, WKUI
         guard navigationAction.targetFrame?.isMainFrame != false else { decisionHandler(.allow); return }
         guard let url = navigationAction.request.url, FocusPolicy.allowed(url) else {
             decisionHandler(.cancel)
-            message = "Focus Tube blokuje Shorts oraz odnośniki poza YouTube i logowaniem Google."
+            message = "This link cannot be opened in Focus Tube."
             return
         }
         decisionHandler(.allow)
@@ -97,16 +104,16 @@ final class FocusBrowser: NSObject, ObservableObject, WKNavigationDelegate, WKUI
             guard let self else { return }
             guard self.webView.url == url else { return }
             self.ready = result as? Bool == true
-            if !self.ready { self.message = "Filtr nie uruchomił się. Naciśnij Odśwież, aby spróbować ponownie." }
+            if !self.ready { self.message = "The filter did not start. Tap refresh to try again." }
         }
     }
     func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) { failed(error) }
     func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) { failed(error) }
     private func failed(_ error: Error) {
         if (error as NSError).code == NSURLErrorCancelled { return }
-        loading = false; ready = false; message = "Nie udało się wczytać strony. Sprawdź internet i naciśnij Odśwież."
+        loading = false; ready = false; message = "Could not load the page. Check your connection and try again."
     }
-    func webViewWebContentProcessDidTerminate(_ webView: WKWebView) { loading = false; ready = false; message = "Odtwarzacz został zamknięty przez iOS. Naciśnij Odśwież." }
+    func webViewWebContentProcessDidTerminate(_ webView: WKWebView) { loading = false; ready = false; message = "The player stopped. Tap refresh to try again." }
     func webView(_ webView: WKWebView, createWebViewWith configuration: WKWebViewConfiguration, for navigationAction: WKNavigationAction, windowFeatures: WKWindowFeatures) -> WKWebView? {
         if navigationAction.targetFrame == nil, let url = navigationAction.request.url { open(url) }
         return nil
@@ -124,7 +131,7 @@ struct FocusScreen: View {
     @State private var input = ""
     @State private var showInfo = false
     @FocusState private var typing: Bool
-    private let background = Color(red: 0.07, green: 0.14, blue: 0.11)
+    private let background = FocusTheme.background
     var body: some View {
         NavigationStack {
             ZStack {
@@ -133,67 +140,66 @@ struct FocusScreen: View {
                 if browser.home { startScreen }
                 else if !browser.ready {
                     VStack(spacing: 20) {
-                        if browser.loading { ProgressView(); Text("Otwieram YouTube…") }
-                        else { Image(systemName: "wifi.exclamationmark").font(.largeTitle); Text("Nie udało się otworzyć widoku."); Button("Odśwież") { browser.webView.reload() } }
+                        if browser.loading { ProgressView(); Text("Opening YouTube…") }
+                        else { Image(systemName: "wifi.exclamationmark").font(.largeTitle); Text("Could not open this page."); Button("Refresh") { browser.webView.reload() } }
                     }.padding()
                 }
             }
             .navigationTitle("Focus Tube").navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) { Button { browser.goHome() } label: { Image(systemName: "house") }.accessibilityLabel("Ekran startowy") }
+                ToolbarItem(placement: .topBarLeading) { Button { browser.goHome() } label: { Image(systemName: "house") }.accessibilityLabel("Home") }
                 ToolbarItemGroup(placement: .topBarTrailing) {
-                    if !browser.home { Button { browser.saveCurrent() } label: { Image(systemName: "bookmark") }.accessibilityLabel("Zapisz film") }
-                    Button { showInfo = true } label: { Image(systemName: "info.circle") }.accessibilityLabel("Informacje")
+                    if !browser.home { Button { browser.saveCurrent() } label: { Image(systemName: "bookmark") }.accessibilityLabel("Save video") }
+                    Button { showInfo = true } label: { Image(systemName: "info.circle") }.accessibilityLabel("About")
                 }
                 if !browser.home {
                     ToolbarItemGroup(placement: .bottomBar) {
-                        Button { browser.webView.goBack() } label: { Image(systemName: "chevron.left") }.disabled(!browser.canGoBack).accessibilityLabel("Wstecz")
+                        Button { browser.webView.goBack() } label: { Image(systemName: "chevron.left") }.disabled(!browser.canGoBack).accessibilityLabel("Back")
                         Spacer()
-                        Button("Szukaj") { browser.goHome(); typing = true }
+                        Button("Search") { browser.goHome(); typing = true }
                         Spacer()
-                        Button { browser.webView.reload() } label: { Image(systemName: "arrow.clockwise") }.accessibilityLabel("Odśwież")
+                        Button { browser.webView.reload() } label: { Image(systemName: "arrow.clockwise") }.accessibilityLabel("Refresh")
                         Spacer()
-                        Button { browser.open(URL(string: "https://m.youtube.com/feed/you")!) } label: { Image(systemName: "person.crop.circle") }.accessibilityLabel("Konto YouTube")
+                        Button { browser.open(URL(string: "https://m.youtube.com/feed/you")!) } label: { Image(systemName: "person.crop.circle") }.accessibilityLabel("YouTube account")
                     }
                 }
             }
             .alert("Focus Tube", isPresented: Binding(get: { browser.message != nil }, set: { if !$0 { browser.message = nil } })) { Button("OK") { browser.message = nil } } message: { Text(browser.message ?? "") }
             .sheet(isPresented: $showInfo) {
                 NavigationStack { ScrollView { VStack(alignment: .leading, spacing: 18) {
-                    Text("Oglądasz to, co wybierasz.").font(.title.bold())
-                    Text("Własny ekran aplikacji, wyszukiwanie YouTube i porcje po 15 wyników. Rozpoznane Shortsy, rekomendacje pod filmem i autoplay są blokowane.")
-                    Text("Filmy i logowanie obsługuje YouTube wewnątrz aplikacji. Google może odmówić logowania w tym widoku. Premium, PiP i odtwarzanie w tle wymagają sprawdzenia na Twoim telefonie; tryb offline nie jest dostępny.")
-                    Text("Zapisane linki pozostają na tym urządzeniu. Aplikacja nie ma analityki ani własnego serwera. Nie blokuje oficjalnej aplikacji YouTube ani ustawień telefonu.").foregroundStyle(.secondary)
-                    Text("Focus Tube Native 0.2.1 · prototyp").font(.footnote)
-                }.padding(24) }.navigationTitle("O aplikacji").toolbar { Button("Gotowe") { showInfo = false } } }
+                    Text("About Focus Tube").font(.title.bold())
+                    Text("Search YouTube without Shorts or an endless feed. Results load 15 at a time.")
+                    Text("YouTube handles playback and sign-in. Google may block sign-in here. Premium, picture in picture and background playback need testing on your device. Offline playback is unavailable.")
+                    Text("Saved videos stay on this device. This app does not block the official YouTube app.").foregroundStyle(.secondary)
+                    Text("Focus Tube 0.3.0").font(.footnote)
+                }.padding(24) }.navigationTitle("About").toolbar { Button("Done") { showInfo = false } } }
             }
         }
     }
     private var startScreen: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 24) {
-                Image(systemName: "play.rectangle.fill").font(.system(size: 48)).foregroundStyle(.tint).padding(.top, 32)
-                Text("Jeden film.\nTwój wybór.").font(.system(size: 42, weight: .semibold, design: .rounded))
-                Text("Bez Shorts i przewijania bez końca.").foregroundStyle(.secondary)
+            VStack(alignment: .leading, spacing: 20) {
+                HStack { Image(systemName: "play.fill").font(.system(size: 17, weight: .bold)).foregroundStyle(background).frame(width: 44, height: 44).background(FocusTheme.accent, in: RoundedRectangle(cornerRadius: 14)); Text("FOCUS TUBE").font(.caption.weight(.bold)).tracking(2).foregroundStyle(.secondary); Spacer() }.padding(.top, 22)
+                Text("Search YouTube").font(.largeTitle.weight(.semibold)).fixedSize(horizontal: false, vertical: true)
+                Text("Search YouTube or open a video link.").foregroundStyle(.secondary)
                 VStack(spacing: 12) {
-                    TextField("Temat lub link do filmu", text: $input).textInputAutocapitalization(.never).autocorrectionDisabled().submitLabel(.search).focused($typing).padding(16).background(.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 16)).onSubmit(search)
-                    Button(action: search) { Label("Szukaj lub otwórz", systemImage: "magnifyingglass").frame(maxWidth: .infinity).padding(8) }.buttonStyle(.borderedProminent).disabled(input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    TextField("Search or paste a video link", text: $input).textInputAutocapitalization(.never).autocorrectionDisabled().submitLabel(.search).focused($typing).padding(16).background(FocusTheme.surface, in: RoundedRectangle(cornerRadius: FocusTheme.corner)).onSubmit(search)
+                    Button(action: search) { Label("Search videos", systemImage: "magnifyingglass").frame(maxWidth: .infinity).padding(8) }.buttonStyle(.borderedProminent).disabled(input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
                 HStack {
-                    Button("Subskrypcje") { browser.open(URL(string: "https://m.youtube.com/feed/subscriptions")!) }
-                    Spacer()
-                    Button("Konto") { browser.open(URL(string: "https://m.youtube.com/feed/you")!) }
+                    Button { browser.open(URL(string: "https://m.youtube.com/feed/subscriptions")!) } label: { Label("Subscriptions", systemImage: "rectangle.stack").frame(maxWidth: .infinity).padding(.vertical, 8) }
+                    Button { browser.open(URL(string: "https://m.youtube.com/feed/you")!) } label: { Label("Account", systemImage: "person.crop.circle").frame(maxWidth: .infinity).padding(.vertical, 8) }
                 }.buttonStyle(.bordered)
                 if !browser.saved.isEmpty {
-                    Text("Na później").font(.title2.bold())
+                    Text("Saved videos").font(.title2.bold())
                     ForEach(browser.saved) { film in
                         HStack {
                             Button { if let url = URL(string: film.url) { browser.open(url) } } label: { Label(film.title, systemImage: "play.circle").multilineTextAlignment(.leading).frame(maxWidth: .infinity, alignment: .leading).padding(.vertical, 10) }
-                            Button(role: .destructive) { browser.remove(film) } label: { Image(systemName: "trash").padding(10) }.accessibilityLabel("Usuń zapisany film")
+                            Button(role: .destructive) { browser.remove(film) } label: { Image(systemName: "trash").padding(10) }.accessibilityLabel("Remove saved video")
                         }
                     }
                 }
-                Text("Linki zapisujesz ikoną zakładki podczas oglądania.").font(.footnote).foregroundStyle(.secondary)
+                Text("Tap the bookmark while watching to save a video.").font(.footnote).foregroundStyle(.secondary)
             }.padding(24)
         }.scrollDismissesKeyboard(.interactively)
     }

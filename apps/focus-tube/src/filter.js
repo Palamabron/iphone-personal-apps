@@ -253,23 +253,23 @@ export function installFocusTube(win, options = {}) {
     if (target.dataset.view === viewKey) return;
     target.dataset.view = viewKey;
     target.replaceChildren(element("div", { className: "ft-home-inner" },
-      element("div", { className: "ft-wordmark" }, element("span", { className: "ft-mark", "aria-hidden": "true" }, "▶"), "focus tube", element("span", { style: "font-size:11px;letter-spacing:0;margin-left:auto;color:#b4c6af" }, "FILTR AKTYWNY")),
-      element("p", { className: "ft-eyebrow" }, "Mniej impulsu. Więcej wyboru."),
-      element("h1", {}, "Co chcesz", element("br"), "dzisiaj obejrzeć?"),
-      element("p", { className: "ft-intro" }, "Jeden dobry film wystarczy. Wyszukaj temat lub wklej link, a resztę zostaw za sobą."),
+      element("div", { className: "ft-wordmark" }, element("span", { className: "ft-mark", "aria-hidden": "true" }, "▶"), "focus tube", element("span", { style: "font-size:11px;letter-spacing:0;margin-left:auto;color:#b4c6af" }, "FILTER ON")),
+      element("p", { className: "ft-eyebrow" }, "WATCH WITH INTENT"),
+      element("h1", {}, "What do you want", element("br"), "to watch?"),
+      element("p", { className: "ft-intro" }, "Search for a video or paste a link."),
       element("div", { className: "ft-blocked", "data-ft-reason": "", hidden: true }),
-      element("form", {}, element("label", { for: "ft-query" }, "Temat lub link do filmu"),
-        element("div", { className: "ft-search-row" }, element("input", { id: "ft-query", name: "q", type: "search", autocomplete: "off", placeholder: "Czego chcesz się dowiedzieć?", required: "" }), element("button", { type: "submit", "aria-label": "Wyszukaj lub otwórz film" }, "Szukaj")),
+      element("form", {}, element("label", { for: "ft-query" }, "Topic or video link"),
+        element("div", { className: "ft-search-row" }, element("input", { id: "ft-query", name: "q", type: "search", autocomplete: "off", placeholder: "Search or paste a link", required: "" }), element("button", { type: "submit", "aria-label": "Search or open a video" }, "Search")),
         element("p", { className: "ft-error", role: "status", "aria-live": "polite" })),
-      element("nav", { "aria-label": "Twoje miejsca w YouTube" },
-        element("a", { href: "/feed/subscriptions" }, "Subskrypcje ↗"), element("a", { href: "/playlist?list=WL" }, "Do obejrzenia ↗"), element("a", { href: "/feed/library" }, "Twoja biblioteka ↗"), element("a", { href: "/channel_switcher" }, "Zmień konto ↗")),
-      element("p", { className: "ft-note" }, "Bez Shortsów i polecanego feedu. Odtwarzacz i konto pozostają w YouTube. Filtr działa w tej karcie Safari.")
+      element("nav", { "aria-label": "YouTube links" },
+        element("a", { href: "/feed/subscriptions" }, "Subscriptions ↗"), element("a", { href: "/playlist?list=WL" }, "Watch later ↗"), element("a", { href: "/feed/library" }, "Your library ↗"), element("a", { href: "/channel_switcher" }, "Switch account ↗")),
+      element("p", { className: "ft-note" }, "Shorts and recommendations are hidden. Videos and account access are provided by YouTube.")
     ));
     const messages = {
-      shorts: "Ten link prowadzi do Shortsów. Wybierz temat lub pełny film.",
-      autoplay: "Film skończony. Kolejny wybór należy do Ciebie."
+      shorts: "Shorts links are blocked. Search for a video instead.",
+      autoplay: "Video ended. Choose what to watch next."
     };
-    const message = route === "blocked" ? messages.shorts : (route === "unsupported" ? "Ten widok nie jest obsługiwany przez filtr. Wybierz film przez wyszukiwarkę." : messages[reason]);
+    const message = route === "blocked" ? messages.shorts : (route === "unsupported" ? "This page is not supported. Search for a video instead." : messages[reason]);
     if (message) {
       const notice = target.querySelector("[data-ft-reason]");
       notice.hidden = false;
@@ -280,7 +280,7 @@ export function installFocusTube(win, options = {}) {
       const result = resolveInput(target.querySelector("input").value, win.location.origin);
       const error = target.querySelector(".ft-error");
       if (result.type === "shorts") { error.textContent = messages.shorts; return; }
-      if (result.type === "invalid") { error.textContent = "Wklej link do zwykłego filmu YouTube lub wpisz temat."; return; }
+      if (result.type === "invalid") { error.textContent = "Enter a topic or paste a YouTube video link."; return; }
       if (result.url) { approved = { url: result.url, time: Date.now() }; navigate(result.url); }
     });
   }
@@ -295,7 +295,7 @@ export function installFocusTube(win, options = {}) {
       return;
     }
     const continuation = [...doc.querySelectorAll(CONTINUATION_SELECTOR)].find((el) => !el.closest("[data-ft-hidden]"));
-    if (!continuation) { feedback = "To wszystkie dostępne pozycje na tej stronie."; schedule(); return; }
+    if (!continuation) { feedback = "No more items on this page."; schedule(); return; }
     limit += PAGE_SIZE;
     loadingFromCount = cards.length;
     waiting = true;
@@ -303,7 +303,7 @@ export function installFocusTube(win, options = {}) {
     const button = continuation.querySelector("button,[role='button'],ytm-button-renderer");
     if (button) button.click();
     else continuation.scrollIntoView({ block: "end", behavior: "instant" });
-    loadingTimer = win.setTimeout(() => { stopLoading(); feedback = "YouTube nie dodał pozycji. Spróbuj ponownie lub zmień wyszukiwanie."; schedule(); }, 5000);
+    loadingTimer = win.setTimeout(() => { stopLoading(); feedback = "No more items loaded. Try again or change your search."; schedule(); }, 5000);
     schedule();
   }
 
@@ -311,25 +311,25 @@ export function installFocusTube(win, options = {}) {
     const target = createShell("ft-footer");
     if (!target) return;
     if (!target.firstElementChild) {
-      target.replaceChildren(element("div", { className: "ft-summary" }, element("strong", {}, "Focus Tube · filtr aktywny"), element("span", { "aria-live": "polite" }), element("div", { className: "ft-links" }, element("a", { href: "/" }, "Szukaj"), element("a", { href: "/channel_switcher" }, "Zmień konto"))), element("button", { type: "button" }, "Pokaż kolejne 15"));
+      target.replaceChildren(element("div", { className: "ft-summary" }, element("strong", {}, "Focus Tube · filter on"), element("span", { "aria-live": "polite" }), element("div", { className: "ft-links" }, element("a", { href: "/" }, "Search"), element("a", { href: "/feed/you" }, "Account"))), element("button", { type: "button" }, "Show 15 more"));
       target.querySelector("button").addEventListener("click", showMore);
     }
-    let message = feedback || `${Math.min(cards.length, limit)} widocznych. Kolejne wybierasz sam.`;
+    let message = feedback || `${Math.min(cards.length, limit)} shown.`;
     if (!cards.length) message = Date.now() - routeStarted < 5000
-      ? "Czekam na wyniki YouTube…"
-      : "Brak rozpoznanych wyników. Brak treści, logowanie lub zmiana YouTube — spróbuj wyszukać film.";
-    if (waiting) message = "Pobieram wybraną porcję…";
+      ? "Waiting for YouTube results…"
+      : "No videos shown. Try another search or open Account to sign in.";
+    if (waiting) message = "Loading more results…";
     const label = target.querySelector(".ft-summary span");
     if (label.textContent !== message) label.textContent = message;
     const button = target.querySelector("button");
     button.disabled = waiting;
-    const buttonText = waiting ? "Ładowanie…" : "Pokaż kolejne 15";
+    const buttonText = waiting ? "Loading…" : "Show 15 more";
     if (button.textContent !== buttonText) button.textContent = buttonText;
   }
 
   function showBadge() {
     const target = createShell("ft-badge");
-    if (target && !target.firstElementChild) target.append(element("a", { href: "/", "aria-label": "Focus Tube: wróć do wyszukiwarki" }, "↖ Focus Tube · filtr aktywny"));
+    if (target && !target.firstElementChild) target.append(element("a", { href: "/", "aria-label": "Focus Tube: return to search" }, "↖ Focus Tube · filter on"));
   }
 
   function sweep() {

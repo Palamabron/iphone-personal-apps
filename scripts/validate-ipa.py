@@ -26,7 +26,7 @@ for argument in sys.argv[1:]:
         extensions = []
         if 'FocusTubeNative' in package.name:
             assert info['CFBundleIdentifier'] == 'dev.palamabron.focustube.native'
-            assert info['CFBundleShortVersionString'] == '0.2.1'
+            assert info['CFBundleShortVersionString'] == '0.3.0'
             assert not any('.appex/' in name for name in names)
             code = archive.read(app + '/filter.js').decode()
             assert 'installFocusTube' in code and 'data-ft-active' in code
@@ -41,7 +41,7 @@ for argument in sys.argv[1:]:
             manifest = json.loads(archive.read(folder + '/manifest.json'))
             assert manifest['content_scripts'][0]['world'] == 'MAIN'
             assert set(manifest['content_scripts'][0]['matches']) == {'https://youtube.com/*', 'https://m.youtube.com/*', 'https://www.youtube.com/*'}
-            assert 'Zmień konto' in archive.read(folder + '/content.js').decode()
+            assert 'Switch account' in archive.read(folder + '/content.js').decode()
             host_html = archive.read(app + '/Base.lproj/Main.html').decode()
             assert 'lang="pl"' in host_html and 'Rozszerzenia' in host_html
             extensions.append(extension['CFBundleIdentifier'])
