@@ -1,7 +1,12 @@
 {
-  "generatedAt": "2026-10-30T15:09:11.086Z",
+  "generatedAt": "2026-10-30T16:19:11.199Z",
   "textLineEndings": "LF",
   "files": [
+    {
+      "path": ".github/workflows/focus-device.yml",
+      "bytes": 833,
+      "sha256": "d1daf145eb68cc349d43cbb7260b2ce561c234cfe6fefb41b8e2329ed1971adc"
+    },
     {
       "path": ".github/workflows/focus-native.yml",
       "bytes": 2224,

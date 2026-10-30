@@ -1,0 +1,28 @@
+name: Build Focus Tube device package
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    if: github.event.repository.private == false
+    runs-on: macos-15
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: apps/focus-tube
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: node --test
+      - run: node scripts/build-native-ios.mjs
+      - run: python3 ../../scripts/validate-ipa.py build/ios/FocusTubeNative-unsigned.ipa
+      - uses: actions/upload-artifact@v4
+        with:
+          name: focus-device
+          path: |
+            apps/focus-tube/build/ios/FocusTubeNative-unsigned.ipa
+            apps/focus-tube/build/ios/FocusTubeNative-unsigned.validation.json
+          retention-days: 3
