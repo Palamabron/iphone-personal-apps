@@ -153,7 +153,7 @@ struct FocusScreen: View {
                         Spacer()
                         Button { browser.webView.reload() } label: { Image(systemName: "arrow.clockwise") }.accessibilityLabel("Odśwież")
                         Spacer()
-                        Button { browser.open(URL(string: "https://m.youtube.com/channel_switcher")!) } label: { Image(systemName: "person.crop.circle") }.accessibilityLabel("Zmień konto")
+                        Button { browser.open(URL(string: "https://m.youtube.com/feed/you")!) } label: { Image(systemName: "person.crop.circle") }.accessibilityLabel("Konto YouTube")
                     }
                 }
             }
@@ -164,7 +164,7 @@ struct FocusScreen: View {
                     Text("Własny ekran aplikacji, wyszukiwanie YouTube i porcje po 15 wyników. Rozpoznane Shortsy, rekomendacje pod filmem i autoplay są blokowane.")
                     Text("Filmy i logowanie obsługuje YouTube wewnątrz aplikacji. Google może odmówić logowania w tym widoku. Premium, PiP i odtwarzanie w tle wymagają sprawdzenia na Twoim telefonie; tryb offline nie jest dostępny.")
                     Text("Zapisane linki pozostają na tym urządzeniu. Aplikacja nie ma analityki ani własnego serwera. Nie blokuje oficjalnej aplikacji YouTube ani ustawień telefonu.").foregroundStyle(.secondary)
-                    Text("Focus Tube Native 0.2.0 · prototyp").font(.footnote)
+                    Text("Focus Tube Native 0.2.1 · prototyp").font(.footnote)
                 }.padding(24) }.navigationTitle("O aplikacji").toolbar { Button("Gotowe") { showInfo = false } } }
             }
         }
@@ -182,7 +182,7 @@ struct FocusScreen: View {
                 HStack {
                     Button("Subskrypcje") { browser.open(URL(string: "https://m.youtube.com/feed/subscriptions")!) }
                     Spacer()
-                    Button("Konto") { browser.open(URL(string: "https://m.youtube.com/channel_switcher")!) }
+                    Button("Konto") { browser.open(URL(string: "https://m.youtube.com/feed/you")!) }
                 }.buttonStyle(.bordered)
                 if !browser.saved.isEmpty {
                     Text("Na później").font(.title2.bold())
