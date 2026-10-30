@@ -1,20 +1,17 @@
-# Osobiste aplikacje iPhone
+# Personal iPhone apps
 
-Dwa projekty aplikacji na iOS 18 lub nowszy, instalowane bez płatnego konta Apple Developer. Windows lub Ubuntu wystarcza do instalacji przez SideStore. Źródła wybrane za zgodą właściciela; pierwotne repozytoria pozostają prywatne. W repozytorium nie ma konfiguracji prywatnego hostingu, kont, certyfikatów ani danych preferencji. Dołączone wydarzenia pochodzą z publicznych ogłoszeń.
+Two projects for iOS 18 and later, installable without a paid Apple Developer account. Windows or Ubuntu can be used with SideStore. Sources were selected for publication with the owner's consent; the original repositories remain private. This repository contains no private hosting configuration, account credentials, certificates, or personal preferences. Bundled events come from public listings.
 
-| Aplikacja | Co robi | Pobierz |
+| App | Description | Download |
 |---|---|---|
-| Focus Tube Native 0.2.0 | Samodzielna aplikacja z natywnym ekranem, wbudowanym YouTube i filtrem Shorts | [Pobierz i zainstaluj](docs/FOCUS-NATIVE.md) |
-| Focus Tube 0.1.1 | Własne rozszerzenie Safari filtrujące YouTube, polski ekran konfiguracji | [FocusTube-unsigned.ipa](https://github.com/Palamabron/iphone-personal-apps/releases/download/iphone-2026.10.21/FocusTube-unsigned.ipa) |
-| Tech Radar 0.2.0 | Samodzielna aplikacja z wydarzeniami, lokalnym zapisem i odświeżaniem publicznych źródeł | [TechRadar-unsigned.ipa](https://github.com/Palamabron/iphone-personal-apps/releases/download/iphone-2026.10.21/TechRadar-unsigned.ipa) |
+| Focus Tube Native 0.3.0 | Standalone app with a native home screen, embedded YouTube, and a Shorts filter | [IPA](https://github.com/Palamabron/iphone-personal-apps/releases/download/focus-native-0.3.0/FocusTubeNative-unsigned.ipa) |
+| Focus Tube 0.1.1 | Safari extension that filters YouTube | [IPA](https://github.com/Palamabron/iphone-personal-apps/releases/download/iphone-2026.10.21/FocusTube-unsigned.ipa) |
+| Tech Radar 0.3.0 | Standalone event app with local storage and public-source refresh | [IPA](https://github.com/Palamabron/iphone-personal-apps/releases/download/radar-0.3.0/TechRadar-unsigned.ipa) |
 
-**[Instrukcja instalacji na iPhonie z Windowsa/Ubuntu](docs/INSTALL_IPHONE.md).** Pobrane IPA trzeba podpisać przy instalacji przez SideStore. Samo pobranie pliku w Safari nie instaluje aplikacji. Darmowy podpis wymaga odnawiania przed upływem 7 dni.
+[Installation instructions for Windows and Ubuntu](docs/INSTALL_IPHONE.md). The downloaded IPA must be signed during installation using SideStore, Sideloadly, or a similar tool. Downloading it alone does not install it. Free signing expires after seven days and must be refreshed.
 
-Obie kompilacje Xcode oraz kontrole paczek urządzenia przeszły: [wynik GitHub Actions](https://github.com/Palamabron/iphone-personal-apps/actions/runs/39633098802), [zakres walidacji](docs/BUILD-VALIDATION.md). **Instalacja, podpisanie i działanie na fizycznym iPhonie pozostają do potwierdzenia.**
+Xcode builds and package validation have passed. Real-device behavior, account sign-in, and automatic renewal still need verification. See [build validation](docs/BUILD-VALIDATION.md) and the [Focus Native notes](docs/FOCUS-NATIVE.md).
 
-W GitHub Actions można ręcznie uruchomić Build personal iPhone apps. Workflow używa standardowego macos-15, nie potrzebuje konta Apple i pomija prywatne repozytoria, by nie zużywać płatnych minut. Artefakty Actions są dostępne przez jeden dzień; pliki wydania mają stałe linki powyżej. [Zasady bezpłatnego użycia GitHub Actions](https://docs.github.com/en/billing/concepts/product-billing/github-actions).
+Run the appropriate GitHub Actions workflow manually to build on a standard public macOS runner without Apple credentials. Private repositories are excluded to avoid consuming metered minutes. Action artifacts expire; release assets use the links above. See [GitHub Actions billing](https://docs.github.com/en/billing/concepts/product-billing/github-actions).
 
-Kompilacja lokalna na własnym Macu z Xcode: przejść do `apps/<nazwa>` i uruchomić `node scripts/build-ios.mjs`. Testy wspólnej logiki: `node --test` w danym katalogu aplikacji. Ikony odtwarza `node scripts/create-icons.mjs`. Manifest źródeł odświeża `node scripts/update-source-manifest.mjs`.
-
-
-Focus Tube Native jest osobnym przyrostem z 22.10.2026; wyniki starszej kompilacji rozszerzenia nie stanowią testu nowej aplikacji. Zobacz [zakres i instalację](docs/FOCUS-NATIVE.md).
+On a Mac with Xcode, enter `apps/<name>` and run `node scripts/build-ios.mjs`. Run `node --test` in an app directory for shared logic tests. Recreate icons with `node scripts/create-icons.mjs` and update the source manifest with `node scripts/update-source-manifest.mjs`.

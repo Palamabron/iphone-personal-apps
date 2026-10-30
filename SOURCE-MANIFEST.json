@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-30T14:58:06.847Z",
+  "generatedAt": "2026-10-30T15:03:09.438Z",
   "textLineEndings": "LF",
   "files": [
     {
@@ -24,8 +24,8 @@
     },
     {
       "path": "README.md",
-      "bytes": 2595,
-      "sha256": "b51545a31c08b92e7689552d1c58a9421a2aa681de185deab812bf12de28b233"
+      "bytes": 2243,
+      "sha256": "dce8caccdc7476d34ee137d023c03602c350e2d0da4fd1eacec6cf770d443723"
     },
     {
       "path": "apps/focus-tube/docs/IPHONE_SIDELOAD.md",
