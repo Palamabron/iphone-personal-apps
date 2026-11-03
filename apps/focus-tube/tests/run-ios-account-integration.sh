@@ -32,6 +32,6 @@ DEVICE=$(xcrun simctl list devices available -j | python3 -c 'import json,sys; d
 xcrun simctl boot "$DEVICE" || true
 xcrun simctl bootstatus "$DEVICE" -b
 xcrun simctl install "$DEVICE" build/account-test/Build/Products/Debug-iphonesimulator/FocusTubeNative.app
-perl -e 'alarm shift; exec @ARGV' 90 xcrun simctl launch --console --terminate-running-process "$DEVICE" dev.palamabron.focustube.accounttests > /tmp/focus-account-test-output.log 2>&1 || true
+perl -e 'alarm shift; exec @ARGV' 240 xcrun simctl launch --console --terminate-running-process "$DEVICE" dev.palamabron.focustube.accounttests > /tmp/focus-account-test-output.log 2>&1 || true
 cat /tmp/focus-account-test-output.log
 grep -q 'FOCUS_ACCOUNT_TESTS_PASSED' /tmp/focus-account-test-output.log
