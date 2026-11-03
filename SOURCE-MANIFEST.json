@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-03T21:42:20.557Z",
+  "generatedAt": "2026-11-03T21:45:05.935Z",
   "textLineEndings": "LF",
   "files": [
     {
@@ -49,8 +49,8 @@
     },
     {
       "path": "apps/focus-tube/ios/FocusApp.swift",
-      "bytes": 26540,
-      "sha256": "a497e242e643d0fb6d1bd08ebbc7f60daf53736bf03f860dbe33ddea280d36da"
+      "bytes": 26668,
+      "sha256": "ef03a420eaded44c81145f1c1255bac65120dcc0e992d820654e8773ef2917b2"
     },
     {
       "path": "apps/focus-tube/ios/FocusDiscovery.swift",
@@ -69,8 +69,8 @@
     },
     {
       "path": "apps/focus-tube/ios/FocusYouTubeAccount.swift",
-      "bytes": 23685,
-      "sha256": "59b0457a2994dc09b296b8b7466d22e16d20dcbe66b174e5797373693f18d75e"
+      "bytes": 23889,
+      "sha256": "74ce3626a5e3767c2932d32a88ce9039b7c5ada42b0b0d9d298d1e7b08b57e36"
     },
     {
       "path": "apps/focus-tube/ios/Main.html",

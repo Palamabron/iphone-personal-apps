@@ -25,6 +25,7 @@ final class FocusYouTubeAccount: NSObject, ObservableObject, ASWebAuthentication
     @Published private(set) var signedIn = false
     @Published private(set) var busy = false
     @Published private(set) var syncSucceeded = false
+    @Published private(set) var signInSucceeded = false
     @Published private(set) var notice: String?
 
     private struct Credentials: Codable {
@@ -122,6 +123,7 @@ final class FocusYouTubeAccount: NSObject, ObservableObject, ASWebAuthentication
         return schemes.contains(scheme) ? value : nil
     }
     var configured: Bool { clientID != nil }
+    var hasRefreshToken: Bool { credentials?.refreshToken != nil }
 
     override init() {
         super.init()
@@ -133,6 +135,7 @@ final class FocusYouTubeAccount: NSObject, ObservableObject, ASWebAuthentication
 
     func signIn() async {
         guard !busy else { return }
+        signInSucceeded = false
         guard let client = clientID else {
             notice = "Google sign-in is not configured for this build. An iOS OAuth client and its URL scheme are required."
             return
@@ -171,7 +174,7 @@ final class FocusYouTubeAccount: NSObject, ObservableObject, ASWebAuthentication
             let stored = Credentials(clientID: client, accessToken: token.access_token, refreshToken: token.refresh_token,
                                      expiresAt: Date().addingTimeInterval(max(0, token.expires_in - 60)))
             try writeCredentials(stored)
-            credentials = stored; signedIn = true; syncSucceeded = false
+            credentials = stored; signedIn = true; syncSucceeded = false; signInSucceeded = true
             channels = []; uploads = []; connectedChannel = nil
             notice = token.refresh_token == nil ? "Connected, but Google did not provide a refresh token. You may need to sign in again. Playback sign-in is separate." : "Connected to the YouTube Data API. Playback sign-in is separate."
         } catch {
@@ -273,7 +276,7 @@ final class FocusYouTubeAccount: NSObject, ObservableObject, ASWebAuthentication
     func signOut() {
         generation += 1
         session?.cancel(); session = nil
-        credentials = nil; signedIn = false; syncSucceeded = false; connectedChannel = nil; channels = []; uploads = []
+        credentials = nil; signedIn = false; syncSucceeded = false; signInSucceeded = false; connectedChannel = nil; channels = []; uploads = []
         deleteCredentials()
         notice = "Local API credentials removed. Playback sign-in is separate."
     }

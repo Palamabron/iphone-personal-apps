@@ -220,7 +220,7 @@ struct FocusScreen: View {
                     Text("About Focus Tube").font(.title.bold())
                     Text("Search YouTube without Shorts or an endless feed. Results load 15 at a time.")
                     Text("YouTube handles playback and sign-in. Google may block sign-in here. Premium, picture in picture and background playback need testing on your device. Offline playback is unavailable.")
-                    Text("Recommendations are fetched from HackerTube using selected topics and channel names. They are not synced from your account. Saved videos stay on this device. This app does not block the official YouTube app.").foregroundStyle(.secondary)
+                    Text("HackerTube picks are separate from Google subscription sync. Saved videos stay on this device. This app does not block the official YouTube app.").foregroundStyle(.secondary)
                     Text("Page check").font(.headline)
                     Text("Run this while a YouTube page is open. It shows filter state and element counts; it does not show account details or page text.").font(.footnote).foregroundStyle(.secondary)
                     Button("Check current page") { browser.inspectPage() }.buttonStyle(.bordered)
@@ -274,9 +274,10 @@ struct FocusScreen: View {
                     if !account.configured {
                         Text("Subscription sync needs an iOS Google OAuth client configured for this app.").font(.caption).foregroundStyle(.secondary)
                     } else if !account.signedIn {
-                        Button("Connect subscriptions") { Task { await account.signIn(); if account.signedIn { await account.sync() } } }.buttonStyle(.bordered)
+                        Button("Connect subscriptions") { Task { await account.signIn(); if account.signInSucceeded { await account.sync() } } }.buttonStyle(.bordered)
                     } else {
                         if let channel = account.connectedChannel { Text("Connected channel: \(channel)").font(.caption).foregroundStyle(.secondary) }
+                        if !account.hasRefreshToken { Text("Google did not provide a refresh token. You may need to reconnect when this session expires.").font(.caption).foregroundStyle(.secondary) }
                         HStack {
                             Button("Choose channels") { showChannels = true }.buttonStyle(.bordered).disabled(account.busy)
                             Button("Refresh") { Task { await account.sync(); if account.syncSucceeded { await loadSelectedUploads() } } }.buttonStyle(.bordered).disabled(account.busy)
@@ -288,7 +289,7 @@ struct FocusScreen: View {
                             }.buttonStyle(.plain)
                         }
                         Button("Disconnect subscriptions", role: .destructive) { account.signOut(); selectedChannelIDs = "" }.font(.footnote)
-                        Button("Reconnect Google account") { Task { await account.signIn(); await account.sync(); if account.syncSucceeded { await loadSelectedUploads() } } }.font(.footnote).disabled(account.busy)
+                        Button("Reconnect Google account") { Task { await account.signIn(); if account.signInSucceeded { await account.sync(); if account.syncSucceeded { await loadSelectedUploads() } } } }.font(.footnote).disabled(account.busy)
                     }
                     if let notice = account.notice { Text(notice).font(.caption).foregroundStyle(.secondary) }
                 }
@@ -391,8 +392,7 @@ struct FocusScreen: View {
     private var selectedIDs: Set<String> { Set(selectedChannelIDs.split(separator: ",").map(String.init)) }
     private func loadSelectedUploads() async {
         let selected = account.channels.filter { selectedIDs.contains($0.id) }
-        if selectedIDs.isEmpty { account.clearUploads() }
-        else if selected.isEmpty { return }
+        if selected.isEmpty { account.clearUploads() }
         else { await account.loadUploads(for: selected) }
     }
     private var subscriptionPicker: some View {
