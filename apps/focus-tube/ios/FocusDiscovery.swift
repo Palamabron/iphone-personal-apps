@@ -52,7 +52,7 @@ final class FocusDiscovery: ObservableObject {
             for await (index, items) in group { received[index] = items }
             return received
         }
-        // Keep a mix across areas and subscribed channels, instead of letting
+        // Keep a mix across areas and preset channel searches, instead of letting
         // the fastest response fill the entire finite list.
         var merged: [FocusRecommendation] = []
         var seen = Set<String>()

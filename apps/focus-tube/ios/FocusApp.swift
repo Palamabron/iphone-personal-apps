@@ -237,7 +237,9 @@ struct FocusScreen: View {
 
     private var visibleVideos: [FocusRecommendation] {
         let items = discovery.videos.isEmpty ? FocusRecommendations.videos : discovery.videos
-        return selectedTopic == "All" ? items : items.filter { $0.topic == selectedTopic }
+        let filtered = selectedTopic == "All" ? items : items.filter { $0.topic == selectedTopic }
+        let names = account.channels.filter { selectedIDs.contains($0.id) }.map(\.title)
+        return FocusRecommendations.prioritize(filtered, selectedChannelNames: names)
     }
 
     private var startScreen: some View {
@@ -335,7 +337,7 @@ struct FocusScreen: View {
                                 .accessibilityLabel("Refresh recommendations")
                         }
                     }
-                    Text("HackerTube picks based on your topics and selected channels. Not a live subscription sync.")
+                    Text("HackerTube picks from preset topics. Videos from channels whose names match your selected subscriptions appear first. Matching happens on this device; names may not be unique.")
                         .font(.subheadline).foregroundStyle(.secondary)
                     if let date = discovery.lastUpdated {
                         Text("Updated \(date.formatted(date: .abbreviated, time: .shortened)) · \(visibleVideos.count) videos")

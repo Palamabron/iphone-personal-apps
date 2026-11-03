@@ -22,6 +22,14 @@ import Foundation
             precondition(FocusRecommendations.topics.contains(channel.topic))
             precondition(FocusPolicy.destination(channel.query) != nil)
         }
+        let a = FocusRecommendation(id: "aaaaaaaaaaa", title: "a", channel: "Example Channel", topic: "Computing", reason: "test")
+        let b = FocusRecommendation(id: "bbbbbbbbbbb", title: "b", channel: "Other", topic: "AI & ML", reason: "test")
+        let c = FocusRecommendation(id: "ccccccccccc", title: "c", channel: "EXAMPLE   CHANNEL", topic: "AI & ML", reason: "test")
+        let items = [b, a, c]
+        precondition(FocusRecommendations.prioritize(items, selectedChannelNames: []).map(\.id) == [b.id, a.id, c.id])
+        precondition(FocusRecommendations.prioritize(items, selectedChannelNames: ["  example channel\n"]).map(\.id) == [a.id, c.id, b.id])
+        precondition(FocusRecommendations.prioritize(items, selectedChannelNames: ["example"]).map(\.id) == [b.id, a.id, c.id])
+        precondition(FocusRecommendations.prioritize(items, selectedChannelNames: [" "]).map(\.id) == [b.id, a.id, c.id])
         print("Native URL policy: search, video links, Shorts, auth allowlist and hostile URLs passed")
     }
 }

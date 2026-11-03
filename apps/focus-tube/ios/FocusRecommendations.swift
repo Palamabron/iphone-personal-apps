@@ -26,6 +26,27 @@ struct FocusChannel: Identifiable {
 enum FocusRecommendations {
     static let topics = ["AI & ML", "Science & math", "Computing", "Startups & economics"]
 
+    // HackerTube results contain display names, not verified YouTube channel IDs.
+    // Match locally and keep each partition in its original source order.
+    static func prioritize(_ videos: [FocusRecommendation], selectedChannelNames: [String]) -> [FocusRecommendation] {
+        let names = Set(selectedChannelNames.map(channelNameKey).filter { !$0.isEmpty })
+        guard !names.isEmpty else { return videos }
+        var matching: [FocusRecommendation] = []
+        var other: [FocusRecommendation] = []
+        for video in videos {
+            if names.contains(channelNameKey(video.channel)) { matching.append(video) }
+            else { other.append(video) }
+        }
+        return matching + other
+    }
+
+    private static func channelNameKey(_ name: String) -> String {
+        name.components(separatedBy: .whitespacesAndNewlines)
+            .filter { !$0.isEmpty }
+            .joined(separator: " ")
+            .lowercased()
+    }
+
     static let videos: [FocusRecommendation] = [
         .init(id: "VMj-3S1tku0", title: "Building micrograd: neural networks and backpropagation", channel: "Andrej Karpathy", topic: "AI & ML", reason: "A hands-on introduction to neural networks."),
         .init(id: "7xTGNNLPyMI", title: "Deep Dive into LLMs like ChatGPT", channel: "Andrej Karpathy", topic: "AI & ML", reason: "A detailed look at how language models work."),
