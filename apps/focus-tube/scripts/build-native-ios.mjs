@@ -8,7 +8,7 @@ run(process.execPath, ['scripts/build.mjs', '--extension-only']);
 if (process.platform !== 'darwin') throw new Error('HTML prepared. Building an IPA requires macOS/Xcode; use the manual workflow or your own Mac.');
 const output = path.join(root, 'build', 'ios'); await mkdir(output, { recursive: true });
 const work = await mkdtemp(path.join(output, 'focus-native-'));
-await writeFile(path.join(work, 'FocusApp.swift'), (await readFile(path.join(root, 'ios', 'FocusPolicy.swift'), 'utf8')) + '\n' + (await readFile(path.join(root, 'ios', 'FocusApp.swift'), 'utf8')));
+await writeFile(path.join(work, 'FocusApp.swift'), (await readFile(path.join(root, 'ios', 'FocusPolicy.swift'), 'utf8')) + '\n' + (await readFile(path.join(root, 'ios', 'FocusRecommendations.swift'), 'utf8')) + '\n' + (await readFile(path.join(root, 'ios', 'FocusDiscovery.swift'), 'utf8')) + '\n' + (await readFile(path.join(root, 'ios', 'FocusApp.swift'), 'utf8')));
 const filter = await readFile(path.join(root, 'dist', 'extension', 'content.js'), 'utf8');
 const guarded = `if (['youtube.com','www.youtube.com','m.youtube.com'].includes(location.hostname)) {\n${filter}\n}`;
 const nativePromo = await readFile(path.join(root, 'ios', 'native-promo.js'), 'utf8');
@@ -19,7 +19,7 @@ await writeFile(path.join(icons, 'Contents.json'), JSON.stringify({ images: [{ f
 const project = path.join(work, 'FocusTubeNative.xcodeproj'); await mkdir(path.join(project, 'xcshareddata', 'xcschemes'), { recursive: true });
 const id = n => 'A' + n.toString(16).toUpperCase().padStart(23, '0');
 const settings = 'SDKROOT = iphoneos; IPHONEOS_DEPLOYMENT_TARGET = 18.0; SWIFT_VERSION = 5.0; CLANG_ENABLE_MODULES = YES; TARGETED_DEVICE_FAMILY = 1;';
-const targetSettings = settings + ' PRODUCT_NAME = FocusTubeNative; PRODUCT_BUNDLE_IDENTIFIER = dev.palamabron.focustube.native; CURRENT_PROJECT_VERSION = 3; MARKETING_VERSION = 0.3.0; GENERATE_INFOPLIST_FILE = YES; INFOPLIST_KEY_CFBundleDisplayName = "Focus Tube"; INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES; INFOPLIST_KEY_UILaunchScreen_Generation = YES; INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait; CODE_SIGN_STYLE = Automatic; SWIFT_EMIT_LOC_STRINGS = YES; ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;';
+const targetSettings = settings + ' PRODUCT_NAME = FocusTubeNative; PRODUCT_BUNDLE_IDENTIFIER = dev.palamabron.focustube.native; CURRENT_PROJECT_VERSION = 4; MARKETING_VERSION = 0.4.0; GENERATE_INFOPLIST_FILE = YES; INFOPLIST_KEY_CFBundleDisplayName = "Focus Tube"; INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES; INFOPLIST_KEY_UILaunchScreen_Generation = YES; INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait; CODE_SIGN_STYLE = Automatic; SWIFT_EMIT_LOC_STRINGS = YES; ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;';
 const pbx = `// !$*UTF8*$!
 { archiveVersion = 1; classes = {}; objectVersion = 56; objects = {
 ${id(1)} = {isa = PBXProject; attributes = {LastUpgradeCheck = 1600;}; buildConfigurationList = ${id(2)}; compatibilityVersion = "Xcode 14.0"; developmentRegion = pl; hasScannedForEncodings = 0; knownRegions = (pl,en,Base); mainGroup = ${id(3)}; productRefGroup = ${id(4)}; projectDirPath = ""; projectRoot = ""; targets = (${id(5)});};

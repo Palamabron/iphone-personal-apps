@@ -17,7 +17,8 @@ try {
   await context.addInitScript(() => {
     const NativeDate = Date;
     const fixedNow = NativeDate.parse('2026-10-22T12:00:00Z');
-    window.Date = class extends NativeDate { constructor(...args) { super(...(args.length ? args : [fixedNow])); } static now() { return fixedNow; } };
+    let advanced = 0; window.__advanceTime = milliseconds => { advanced += milliseconds; };
+    window.Date = class extends NativeDate { constructor(...args) { super(...(args.length ? args : [fixedNow + advanced])); } static now() { return fixedNow + advanced; } };
     window.__RADAR_NATIVE_STATE__ = Object.fromEntries(['warsaw-radar-v1', 'warsaw-radar-snapshot-v1'].map(key => [key, window.localStorage.getItem(key)]).filter(([, value]) => value));
     window.__TEST_MESSAGES__ = [];
     window.__TEST_FAIL_NETWORK__ = false;
@@ -37,6 +38,14 @@ try {
   page.on('request', request => requests.push(request.url()));
   await page.goto('https://radar.test/');
   await page.waitForSelector('.event-card');
+  await page.waitForFunction(() => window.__TEST_MESSAGES__.some(message => message.type === 'fetch'));
+  await page.waitForFunction(() => !document.querySelector('#refresh').disabled);
+  await page.locator('#search').fill('Test mostu iOS');
+  assert.equal(await page.locator('.event-card').count(), 1, 'Opening the app discovers a new event');
+  await page.locator('#search').fill('');
+  const startupRequests = await page.evaluate(() => window.__TEST_MESSAGES__.filter(message => message.type === 'fetch').length);
+  await page.evaluate(() => { window.__radarRefreshIfNeeded(); document.dispatchEvent(new Event('visibilitychange')); });
+  assert.equal(await page.evaluate(() => window.__TEST_MESSAGES__.filter(message => message.type === 'fetch').length), startupRequests, 'A recent automatic check is throttled');
   assert.equal(await page.locator('.event-card').count(), 12);
   assert.equal(await page.evaluate(() => window.RADAR_NATIVE), true);
   assert.equal(await page.locator('.install').textContent().then(text => text.includes('Share → Add to Home Screen')), false);
@@ -90,8 +99,13 @@ try {
   await page.getByRole('button', { name: /Refresh sources/ }).click();
   await page.waitForFunction(() => !document.querySelector('#refresh').disabled);
   assert.equal(await page.locator('.event-card').count(), 1);
+  const beforeForeground = await page.evaluate(() => window.__TEST_MESSAGES__.filter(message => message.type === 'fetch').length);
+  await page.evaluate(() => { window.__TEST_FAIL_NETWORK__ = false; window.__advanceTime(7 * 60 * 60 * 1000); window.__radarRefreshIfNeeded(); });
+  await page.waitForFunction(before => window.__TEST_MESSAGES__.filter(message => message.type === 'fetch').length > before, beforeForeground);
+  await page.waitForFunction(() => !document.querySelector('#refresh').disabled);
+  assert.equal(await page.locator('.event-card').count(), 1, 'Saved choices survive a foreground refresh');
   assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
   assert.equal(requests.some(url => !url.startsWith('https://radar.test/')), false);
   assert.deepEqual(errors, []);
-  console.log('Bundled iOS UI: syntax, initial snapshot, native save/reload, ICS/JSON share, source import/allowlist, partial failure preservation, no network leak/errors. Native bridge mocked in Chromium; Xcode/device tests pending.');
+  console.log('Bundled iOS UI: automatic discovery on launch/foreground and throttling, syntax, native save/reload, ICS/JSON share, source import/allowlist, partial failure preservation, no network leak/errors. Native bridge mocked in Chromium; Xcode/device tests pending.');
 } finally { await browser.close(); }

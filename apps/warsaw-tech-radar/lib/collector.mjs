@@ -5,9 +5,10 @@ export const DEFAULT_SOURCES = Object.freeze([
   { name: 'Śniadania AI Warszawa', url: 'https://luma.com/warsaw-ai-breakfast' },
   { name: 'Tech Leaders Collective Warsaw', url: 'https://luma.com/tlcwarsaw' },
   { name: 'Evenea · Warszawa', url: 'https://evenea.pl/wydarzenia/warszawa' },
+  { name: 'StartupJobs · public event feed', url: 'https://www.startupjobs.pl/feed/events.json', feed: 'startupjobs' },
 ]);
 
-const HOSTS = new Set(['luma.com', 'www.luma.com', 'lu.ma', 'www.lu.ma', 'evenea.pl', 'www.evenea.pl', 'app.evenea.pl']);
+const HOSTS = new Set(['luma.com', 'www.luma.com', 'lu.ma', 'www.lu.ma', 'evenea.pl', 'www.evenea.pl', 'app.evenea.pl', 'www.startupjobs.pl', 'startupjobs.pl']);
 const MAX_BYTES = 2_000_000;
 const TIMEOUT_MS = 12_000;
 const RESERVED_LUMA = new Set(['warsaw', 'polandtechweek', 'warsaw-ai-breakfast', 'tlcwarsaw', 'discover', 'home', 'signin', 'login', 'pricing', 'ios', 'android', 'create', 'calendars', 'settings', 'terms', 'privacy', 'about', 'help', 'search', 'user', 'calendar']);
@@ -176,6 +177,44 @@ function mergeEvent(previous, next) {
   return merge;
 }
 
+// Convert the feed's explicit Warsaw local time, rejecting DST gaps and unknown zones.
+function startupJobsTime(day, time, timezone) {
+  if (timezone !== 'Europe/Warsaw' || typeof day !== 'string' || typeof time !== 'string') return null;
+  const value = `${day}T${time}`;
+  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(value)) return null;
+  const approximate = Date.parse(value + ':00Z');
+  if (!Number.isFinite(approximate)) return null;
+  const formatter = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Warsaw', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
+  return [120, 60].map(offset => new Date(approximate - offset * 60000)).find(candidate => formatter.format(candidate).replace(' ', 'T') === value)?.toISOString() || null;
+}
+
+/** Parse StartupJobs' public JSON Feed; preserve a source page if the organizer URL is outside our allowlist. */
+export function parseStartupJobsFeed(content, sourceUrl, fetchedAt = new Date().toISOString()) {
+  const source = safeUrl(sourceUrl);
+  if (!source || !date(fetchedAt)) return [];
+  let feed;
+  try { feed = JSON.parse(String(content)); } catch { throw new Error('Invalid StartupJobs event feed.'); }
+  if (!feed || !Array.isArray(feed.items)) throw new Error('Invalid StartupJobs event feed.');
+  const events = new Map();
+  for (const item of feed.items.slice(0, 1000)) {
+    const details = item?._event;
+    if (!details || typeof details !== 'object') continue;
+    const startDate = startupJobsTime(details.starts_on, details.start_time, details.timezone);
+    const url = safeUrl(item.external_url) || safeUrl(item.url);
+    if (!startDate || !url) continue;
+    const endDate = startupJobsTime(details.ends_on, details.end_time, details.timezone);
+    const priceText = String(details.price || '').trim().toLowerCase();
+    const isFree = /^(bezpłatn(?:y|e|ie)|darmow(?:y|e)|free)$/.test(priceText) ? true : undefined;
+    const raw = { name: item.title, description: item.content_text, url, startDate, endDate, timezone: details.timezone,
+      eventAttendanceMode: details.format === 'online' ? 'OnlineEventAttendanceMode' : details.format === 'in_person' ? 'OfflineEventAttendanceMode' : null,
+      location: { '@type': 'Place', name: details.venue, address: { addressLocality: details.city, streetAddress: details.address } },
+      organizer: details.organizer, isAccessibleForFree: isFree };
+    const event = createEvent(raw, source, fetchedAt);
+    if (event) events.set(event.url, mergeEvent(events.get(event.url), event));
+  }
+  return [...events.values()];
+}
+
 /** Parse JSON-LD Events/ItemLists and Luma's publicly rendered Next.js data. */
 export function parseEventPage(html, url, fetchedAt = new Date().toISOString()) {
   const sourceUrl = safeUrl(url);
@@ -242,9 +281,9 @@ export async function fetchPublicPage(input, { fetchImpl = fetch, timeoutMs = TI
         continue;
       }
       if (!response.ok) { await response.body?.cancel(); throw new Error(`HTTP ${response.status}; source may require access or block requests.`); }
-      if (Number(response.headers.get('content-length')) > maxBytes) { await response.body?.cancel(); throw new Error('Strona przekracza limit rozmiaru.'); }
+      if (Number(response.headers.get('content-length')) > maxBytes) { await response.body?.cancel(); throw new Error('The page exceeds the size limit.'); }
       const contentType = response.headers.get('content-type') || '';
-      if (contentType && !/text\/html|application\/(ld\+)?json|text\/plain/.test(contentType)) { await response.body?.cancel(); throw new Error('Unsupported response type.'); }
+      if (contentType && !/text\/html|application\/(?:ld\+|feed\+)?json|text\/plain/.test(contentType)) { await response.body?.cancel(); throw new Error('Unsupported response type.'); }
       let bytes = 0;
       const chunks = [];
       if (!response.body) throw new Error('Empty source.');
@@ -253,7 +292,7 @@ export async function fetchPublicPage(input, { fetchImpl = fetch, timeoutMs = TI
         const { done, value } = await reader.read();
         if (done) break;
         bytes += value.byteLength;
-        if (bytes > maxBytes) { await reader.cancel(); throw new Error('Strona przekracza limit rozmiaru.'); }
+        if (bytes > maxBytes) { await reader.cancel(); throw new Error('The page exceeds the size limit.'); }
         chunks.push(value);
       }
       const buffer = new Uint8Array(bytes);
@@ -294,18 +333,18 @@ export async function collectEvents({ now = new Date().toISOString(), sources = 
     try {
       const page = await fetchPublicPage(url, { fetchImpl });
       row.fetchedAt = page.fetchedAt;
-      const parsed = parseEventPage(page.html, page.url, page.fetchedAt);
+      const parsed = source.feed === 'startupjobs' ? parseStartupJobsFeed(page.html, page.url, page.fetchedAt) : parseEventPage(page.html, page.url, page.fetchedAt);
       row.count = parsed.length;
       row.status = 'ok';
       for (const event of parsed) {
         if (!relevant(event, Date.parse(timestamp))) continue;
         events.set(event.url, mergeEvent(events.get(event.url), event));
         // Relevant event detail pages are visited before unrelated links.
-        discovered.add(event.url);
+        if (!source.feed) discovered.add(event.url);
       }
-      if (isSeed) for (const link of discoverEventLinks(page.html, page.url)) discovered.add(link);
+      if (isSeed && !source.feed) for (const link of discoverEventLinks(page.html, page.url)) discovered.add(link);
     } catch (error) {
-      row.error = error.name === 'AbortError' ? 'Przekroczono czas pobierania (12 s).' : String(error.message).slice(0, 300);
+      row.error = error.name === 'AbortError' ? 'Request timed out (12 s).' : String(error.message).slice(0, 300);
     }
   }
   // Keep small concurrency so that refreshing from a phone does not burst requests.

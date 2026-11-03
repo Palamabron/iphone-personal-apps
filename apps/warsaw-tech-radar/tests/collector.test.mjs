@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { safeUrl, parseEventPage, discoverEventLinks, fetchPublicPage, collectEvents } from '../lib/collector.mjs';
+import { safeUrl, parseEventPage, parseStartupJobsFeed, discoverEventLinks, fetchPublicPage, collectEvents } from '../lib/collector.mjs';
 
 const fetchedAt = '2026-10-21T12:00:00.000Z';
 const event = (changes = {}) => ({ '@type': 'Event', name: 'Warsaw ML meetup', startDate: '2026-10-26T18:00:00+01:00', endDate: '2026-10-26T20:00:00+01:00', url: 'https://luma.com/ml-meetup', eventAttendanceMode: 'https://schema.org/OfflineEventAttendanceMode', eventStatus: 'https://schema.org/EventScheduled', location: { '@type': 'Place', name: 'Sala', address: { streetAddress: 'Testowa 1', addressLocality: 'Warszawa' } }, ...changes });
@@ -78,7 +78,7 @@ test('outbound fetch is compatible with Workers that reject browser credentials 
 });
 
 test('fetch stops at response size limit and records challenge instead of bypassing', async () => {
-  await assert.rejects(fetchPublicPage('https://luma.com/test', { maxBytes: 5, fetchImpl: async () => new Response('123456') }), /limit rozmiaru/);
+  await assert.rejects(fetchPublicPage('https://luma.com/test', { maxBytes: 5, fetchImpl: async () => new Response('123456') }), /size limit/);
   await assert.rejects(fetchPublicPage('https://evenea.pl/', { fetchImpl: async () => new Response('<title>Just a moment...</title>') }), /CAPTCHA/);
 });
 
@@ -102,4 +102,32 @@ test('broken JSON and untrusted embedded text are not executed', () => {
 test('a second calendar Scheduled default does not erase a cancelled event during partial collection', async () => {
   const snapshot = await collectEvents({ now: fetchedAt, maxPages: 2, sources: [{ name: 'One', url: 'https://luma.com/warsaw' }, { name: 'Two', url: 'https://luma.com/polandtechweek' }], fetchImpl: async url => new Response(html(event({ eventStatus: url.endsWith('/warsaw') ? 'https://schema.org/EventCancelled' : 'https://schema.org/EventScheduled' }))) });
   assert.equal(snapshot.events[0].status, 'cancelled');
+});
+
+
+test('StartupJobs feed uses Warsaw time and keeps verifiable links without inventing prices', async () => {
+  const feedUrl = 'https://www.startupjobs.pl/feed/events.json';
+  const item = { title: 'Warsaw AI meetup', url: 'https://www.startupjobs.pl/wydarzenia/123', external_url: 'https://luma.com/ai-meetup', content_text: 'AI startup', _event: { starts_on: '2026-10-26', start_time: '18:00', timezone: 'Europe/Warsaw', city: 'Warszawa', format: 'in_person' } };
+  const content = JSON.stringify({ version: 'https://jsonfeed.org/version/1.1', items: [item, { ...item, title: 'Bad DST', url: 'https://www.startupjobs.pl/wydarzenia/dst', external_url: undefined, _event: { ...item._event, starts_on: '2026-03-29', start_time: '02:30' } }, { ...item, title: 'No zone', url: 'https://www.startupjobs.pl/wydarzenia/zone', external_url: undefined, _event: { ...item._event, timezone: null } }, { ...item, title: 'Unsupported external', url: 'https://www.startupjobs.pl/wydarzenia/other', external_url: 'https://example.com/unknown' }] });
+  const result = parseStartupJobsFeed(content, feedUrl, fetchedAt);
+  assert.equal(result.length, 2);
+  assert.equal(result[0].startAt, '2026-10-26T17:00:00.000Z');
+  assert.equal(result[0].url, 'https://luma.com/ai-meetup');
+  assert.equal(result[0].price.kind, 'unknown');
+  assert.deepEqual(result[0].sources, [{ url: feedUrl, fetchedAt }]);
+  assert.equal(result[1].url, 'https://www.startupjobs.pl/wydarzenia/other');
+  const response = await fetchPublicPage(feedUrl, { fetchImpl: async () => new Response(content, { headers: { 'content-type': 'application/feed+json' } }) });
+  assert.equal(parseStartupJobsFeed(response.html, feedUrl, fetchedAt).length, 2);
+});
+
+
+
+test('collector discovers fresh Warsaw events in the StartupJobs feed', async () => {
+  const url = 'https://www.startupjobs.pl/feed/events.json';
+  const item = { title: 'Warsaw AI meetup', url: 'https://www.startupjobs.pl/wydarzenia/123', content_text: 'AI startup', _event: { starts_on: '2026-10-26', start_time: '18:00', timezone: 'Europe/Warsaw', city: 'Warszawa', format: 'in_person' } };
+  const feed = { items: [item, { ...item, url: 'https://www.startupjobs.pl/wydarzenia/krakow', _event: { ...item._event, city: 'Kraków' } }, { ...item, url: 'https://www.startupjobs.pl/wydarzenia/online', _event: { ...item._event, format: 'online' } }] };
+  const result = await collectEvents({ now: fetchedAt, sources: [{ name: 'StartupJobs', url, feed: 'startupjobs' }], fetchImpl: async () => new Response(JSON.stringify(feed), { headers: { 'content-type': 'application/feed+json' } }) });
+  assert.equal(result.events.length, 1);
+  assert.equal(result.events[0].url, item.url);
+  assert.equal(result.sources[0].status, 'ok');
 });

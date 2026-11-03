@@ -89,6 +89,9 @@ final class FocusBrowser: NSObject, ObservableObject, WKNavigationDelegate, WKUI
         guard navigationAction.targetFrame?.isMainFrame != false else { decisionHandler(.allow); return }
         guard let url = navigationAction.request.url, FocusPolicy.allowed(url) else {
             decisionHandler(.cancel)
+            // A blocked redirect may arrive after open() set the loading state.
+            // No failure callback is guaranteed for a navigation we cancel here.
+            loading = false
             message = "This link cannot be opened in Focus Tube."
             return
         }
@@ -130,6 +133,9 @@ struct FocusScreen: View {
     @ObservedObject var browser: FocusBrowser
     @State private var input = ""
     @State private var showInfo = false
+    @State private var selectedTopic = "All"
+    @StateObject private var discovery = FocusDiscovery()
+    @Environment(\.scenePhase) private var scenePhase
     @FocusState private var typing: Bool
     private let background = FocusTheme.background
     var body: some View {
@@ -165,43 +171,158 @@ struct FocusScreen: View {
                 }
             }
             .alert("Focus Tube", isPresented: Binding(get: { browser.message != nil }, set: { if !$0 { browser.message = nil } })) { Button("OK") { browser.message = nil } } message: { Text(browser.message ?? "") }
+            .task {
+                await discovery.refreshIfNeeded()
+                while !Task.isCancelled {
+                    try? await Task.sleep(nanoseconds: 1_800_000_000_000)
+                    guard !Task.isCancelled else { break }
+                    if scenePhase == .active { await discovery.refreshIfNeeded() }
+                }
+            }
+            .onChange(of: scenePhase) { _, phase in
+                if phase == .active { Task { await discovery.refreshIfNeeded() } }
+            }
             .sheet(isPresented: $showInfo) {
                 NavigationStack { ScrollView { VStack(alignment: .leading, spacing: 18) {
                     Text("About Focus Tube").font(.title.bold())
                     Text("Search YouTube without Shorts or an endless feed. Results load 15 at a time.")
                     Text("YouTube handles playback and sign-in. Google may block sign-in here. Premium, picture in picture and background playback need testing on your device. Offline playback is unavailable.")
-                    Text("Saved videos stay on this device. This app does not block the official YouTube app.").foregroundStyle(.secondary)
-                    Text("Focus Tube 0.3.0").font(.footnote)
+                    Text("Recommendations are fetched from HackerTube using selected topics and channel names. They are not synced from your account. Saved videos stay on this device. This app does not block the official YouTube app.").foregroundStyle(.secondary)
+                    Text("Focus Tube 0.4.0").font(.footnote)
                 }.padding(24) }.navigationTitle("About").toolbar { Button("Done") { showInfo = false } } }
             }
         }
     }
+    private var topics: [String] {
+        ["All"] + FocusRecommendations.topics
+    }
+
+    private var visibleVideos: [FocusRecommendation] {
+        let items = discovery.videos.isEmpty ? FocusRecommendations.videos : discovery.videos
+        return selectedTopic == "All" ? items : items.filter { $0.topic == selectedTopic }
+    }
+
     private var startScreen: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
-                HStack { Image(systemName: "play.fill").font(.system(size: 17, weight: .bold)).foregroundStyle(background).frame(width: 44, height: 44).background(FocusTheme.accent, in: RoundedRectangle(cornerRadius: 14)); Text("FOCUS TUBE").font(.caption.weight(.bold)).tracking(2).foregroundStyle(.secondary); Spacer() }.padding(.top, 22)
-                Text("Search YouTube").font(.largeTitle.weight(.semibold)).fixedSize(horizontal: false, vertical: true)
-                Text("Search YouTube or open a video link.").foregroundStyle(.secondary)
-                VStack(spacing: 12) {
-                    TextField("Search or paste a video link", text: $input).textInputAutocapitalization(.never).autocorrectionDisabled().submitLabel(.search).focused($typing).padding(16).background(FocusTheme.surface, in: RoundedRectangle(cornerRadius: FocusTheme.corner)).onSubmit(search)
-                    Button(action: search) { Label("Search videos", systemImage: "magnifyingglass").frame(maxWidth: .infinity).padding(8) }.buttonStyle(.borderedProminent).disabled(input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            LazyVStack(alignment: .leading, spacing: 24) {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("FOCUS TUBE").font(.caption.weight(.bold)).tracking(1.4).foregroundStyle(FocusTheme.accent)
+                    Text("What would you like to watch?").font(.largeTitle.weight(.bold)).fixedSize(horizontal: false, vertical: true)
+                    Text("Search YouTube or choose a video below.").foregroundStyle(.secondary)
+                }.padding(.top, 12)
+
+                VStack(spacing: 10) {
+                    HStack(spacing: 12) {
+                        Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
+                        TextField("Search or paste a video link", text: $input)
+                            .textInputAutocapitalization(.never).autocorrectionDisabled().submitLabel(.search).focused($typing).onSubmit(search)
+                    }.padding(16).background(FocusTheme.surface, in: RoundedRectangle(cornerRadius: FocusTheme.corner))
+                    Button(action: search) { Text("Search YouTube").fontWeight(.semibold).frame(maxWidth: .infinity).padding(.vertical, 8) }
+                        .buttonStyle(.borderedProminent).disabled(input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
-                HStack {
-                    Button { browser.open(URL(string: "https://m.youtube.com/feed/subscriptions")!) } label: { Label("Subscriptions", systemImage: "rectangle.stack").frame(maxWidth: .infinity).padding(.vertical, 8) }
-                    Button { browser.open(URL(string: "https://m.youtube.com/feed/you")!) } label: { Label("Account", systemImage: "person.crop.circle").frame(maxWidth: .infinity).padding(.vertical, 8) }
-                }.buttonStyle(.bordered)
+
+                HStack(spacing: 10) {
+                    Button { browser.open(URL(string: "https://m.youtube.com/feed/subscriptions")!) } label: {
+                        Label("Subscriptions", systemImage: "rectangle.stack").frame(maxWidth: .infinity).padding(.vertical, 8)
+                    }
+                    Button { browser.open(URL(string: "https://m.youtube.com/feed/you")!) } label: {
+                        Label("Account", systemImage: "person.crop.circle").frame(maxWidth: .infinity).padding(.vertical, 8)
+                    }
+                }.buttonStyle(.bordered).font(.subheadline.weight(.medium))
+
                 if !browser.saved.isEmpty {
-                    Text("Saved videos").font(.title2.bold())
-                    ForEach(browser.saved) { film in
-                        HStack {
-                            Button { if let url = URL(string: film.url) { browser.open(url) } } label: { Label(film.title, systemImage: "play.circle").multilineTextAlignment(.leading).frame(maxWidth: .infinity, alignment: .leading).padding(.vertical, 10) }
-                            Button(role: .destructive) { browser.remove(film) } label: { Image(systemName: "trash").padding(10) }.accessibilityLabel("Remove saved video")
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Saved videos").font(.title2.bold())
+                        ForEach(browser.saved) { film in
+                            HStack {
+                                Button { if let url = URL(string: film.url) { browser.open(url) } } label: { Label(film.title, systemImage: "play.circle").multilineTextAlignment(.leading).frame(maxWidth: .infinity, alignment: .leading).padding(.vertical, 10) }
+                                Button(role: .destructive) { browser.remove(film) } label: { Image(systemName: "trash").padding(10) }.accessibilityLabel("Remove saved video")
+                            }
                         }
                     }
                 }
-                Text("Tap the bookmark while watching to save a video.").font(.footnote).foregroundStyle(.secondary)
-            }.padding(24)
+
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Explore your interests").font(.title2.bold())
+                    Text("Channel searches inspired by your subscriptions.").font(.subheadline).foregroundStyle(.secondary)
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 10) {
+                            ForEach(FocusRecommendations.channels) { channel in
+                                Button { browser.submit(channel.query) } label: {
+                                    VStack(alignment: .leading, spacing: 8) {
+                                        Image(systemName: "play.rectangle.fill").foregroundStyle(FocusTheme.accent)
+                                        Text(channel.name).font(.subheadline.weight(.semibold)).lineLimit(2).multilineTextAlignment(.leading)
+                                        Text(channel.topic).font(.caption).foregroundStyle(.secondary)
+                                    }.frame(width: 130, height: 100, alignment: .topLeading).padding(14)
+                                        .background(FocusTheme.surface, in: RoundedRectangle(cornerRadius: FocusTheme.corner))
+                                }.buttonStyle(.plain)
+                            }
+                        }
+                    }
+                }
+
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack(alignment: .firstTextBaseline) {
+                        Text("Selected videos").font(.title2.bold())
+                        Spacer()
+                        if discovery.loading { ProgressView().controlSize(.small) }
+                        else {
+                            Button { Task { await discovery.refresh() } } label: { Image(systemName: "arrow.clockwise") }
+                                .accessibilityLabel("Refresh recommendations")
+                        }
+                    }
+                    Text("HackerTube picks based on your topics and selected channels. Not a live subscription sync.")
+                        .font(.subheadline).foregroundStyle(.secondary)
+                    if let date = discovery.lastUpdated {
+                        Text("Updated \(date.formatted(date: .abbreviated, time: .shortened)) · \(visibleVideos.count) videos")
+                            .font(.caption).foregroundStyle(.secondary)
+                    } else {
+                        Text("Offline selection · \(visibleVideos.count) videos").font(.caption).foregroundStyle(.secondary)
+                    }
+                    if let notice = discovery.notice { Text(notice).font(.caption).foregroundStyle(.secondary) }
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 8) {
+                            ForEach(topics, id: \.self) { topic in
+                                Button { selectedTopic = topic } label: {
+                                    Text(topic).font(.subheadline.weight(.medium)).padding(.horizontal, 14).padding(.vertical, 9)
+                                        .foregroundStyle(selectedTopic == topic ? FocusTheme.background : Color.primary)
+                                        .background(selectedTopic == topic ? FocusTheme.accent : FocusTheme.surface, in: Capsule())
+                                }.buttonStyle(.plain).accessibilityAddTraits(selectedTopic == topic ? .isSelected : [])
+                            }
+                        }
+                    }
+                    ForEach(visibleVideos) { video in
+                        Button { browser.open(video.url) } label: { recommendationRow(video) }.buttonStyle(.plain)
+                    }
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Selections from HackerTube, based on open-index/hacker-news. Data: ODC-By 1.0.")
+                        HStack {
+                            Link("HackerTube", destination: URL(string: "https://hackertube.org/data")!)
+                            Link("Hacker News dataset", destination: URL(string: "https://huggingface.co/datasets/open-index/hacker-news")!)
+                            Link("License", destination: URL(string: "https://opendatacommons.org/licenses/by/1-0/")!)
+                        }
+                    }.font(.footnote).foregroundStyle(.secondary).padding(.top, 4)
+                }
+
+
+            }.padding(.horizontal, 20).padding(.bottom, 32)
         }.scrollDismissesKeyboard(.interactively)
+    }
+
+    private func recommendationRow(_ video: FocusRecommendation) -> some View {
+        HStack(alignment: .top, spacing: 12) {
+            AsyncImage(url: URL(string: "https://i.ytimg.com/vi/\(video.id)/mqdefault.jpg")) { image in
+                image.resizable().scaledToFill()
+            } placeholder: {
+                Rectangle().fill(FocusTheme.surface).overlay(Image(systemName: "play.fill").foregroundStyle(FocusTheme.accent))
+            }
+            .frame(width: 112, height: 72).clipped().clipShape(RoundedRectangle(cornerRadius: 10)).accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(video.title).font(.subheadline.weight(.semibold)).lineLimit(3).multilineTextAlignment(.leading)
+                Text(video.channel).font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                Text(video.reason).font(.caption2).foregroundStyle(FocusTheme.accent).lineLimit(2).multilineTextAlignment(.leading)
+            }.frame(maxWidth: .infinity, alignment: .leading)
+        }.padding(10).frame(maxWidth: .infinity, alignment: .leading).background(FocusTheme.surface, in: RoundedRectangle(cornerRadius: FocusTheme.corner))
     }
     private func search() { typing = false; browser.submit(input) }
 }

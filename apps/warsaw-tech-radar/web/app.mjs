@@ -5,6 +5,9 @@ const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;
 let state; try { state = readState(localStorage); } catch { state = readState({ getItem: () => null }); }
 let snapshot = { events: [], sources: [], generatedAt: null }, currentView = 'discover', category = 'all', visible = 12;
 let fetchedDraft = null, toastTimer;
+let lastAutomaticAttempt = 0, refreshInProgress = false;
+const AUTOMATIC_REFRESH_INTERVAL_MS = 6 * 60 * 60 * 1000;
+const AUTOMATIC_RETRY_INTERVAL_MS = 30 * 60 * 1000;
 
 function toast(message) { $('#toast').textContent = message; $('#toast').hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => { $('#toast').hidden = true; }, 4500); }
 function persist() { try { localStorage.setItem('warsaw-radar-v1', JSON.stringify(state)); } catch { $('#storage-warning').hidden = false; } }
@@ -56,10 +59,12 @@ function render() {
 }
 function renderSources() {
   const generated = snapshot.generatedAt && Number.isFinite(Date.parse(snapshot.generatedAt));
-  $('#freshness').textContent = generated ? 'Last checked: ' + formatDate(snapshot.generatedAt, { year: 'numeric', hour: '2-digit', minute: '2-digit' }) + '. Times shown in Warsaw time.' : 'No recent data. Refresh sources or add a link.';
+  $('#freshness').textContent = generated ? 'Last successful check: ' + formatDate(snapshot.generatedAt, { year: 'numeric', hour: '2-digit', minute: '2-digit' }) + '. Times shown in Warsaw time.' : 'No recent data. Refresh sources or add a link.';
   const old = generated && Date.now() - Date.parse(snapshot.generatedAt) > 48 * 3600000;
-  $('#notice').hidden = !old;
+  const failed = (snapshot.sources || []).some(source => source.status !== 'ok');
+  $('#notice').hidden = !old && !failed;
   if (old) $('#notice').textContent = 'Data is over 48 hours old. Refresh and confirm the time with the organizer.';
+  else if (failed) $('#notice').textContent = 'Some sources are unavailable. Saved results are kept; see the source report.';
   $('#sources').innerHTML = (snapshot.sources || []).map(source => `<li>${httpUrl(source.url) ? `<a href="${esc(source.url)}" target="_blank" rel="noopener noreferrer">${esc(source.name || new URL(source.url).hostname)}</a>` : esc(source.name || 'Source')}: ${source.status === 'ok' ? esc(String(source.count ?? 0)) + ' events found' : 'unavailable — ' + esc(source.error || 'try again later')}</li>`).join('') || '<li>No source report.</li>';
 }
 function acceptSnapshot(value) {
@@ -90,10 +95,45 @@ $('#interests').addEventListener('change', () => { state.interests = [...$('#int
 $('#export').addEventListener('click', () => download(JSON.stringify({ version: 1, exportedAt: new Date().toISOString(), ...state }, null, 2), 'application/json', 'warsaw-radar-backup.json'));
 $('#restore-hidden').addEventListener('click', () => { state.decisions = Object.fromEntries(Object.entries(state.decisions).filter(([, value]) => value !== 'hidden')); persist(); render(); toast('Hidden events restored.'); });
 $('#restore').addEventListener('change', async event => { const file = event.target.files[0]; if (!file) return; try { if (file.size > 2000000) throw new Error('Backup is too large'); const value = JSON.parse(await file.text()); if (value.version !== 1 || !value.decisions || !Array.isArray(value.customEvents)) throw new Error('Not a radar backup'); const imported = readState({ getItem: () => JSON.stringify(value) }); state = { decisions: { ...state.decisions, ...imported.decisions }, interests: imported.interests, customEvents: mergeEvents(state.customEvents, imported.customEvents), savedEvents: mergeEvents(state.savedEvents, imported.savedEvents) }; persist(); render(); toast('Backup restored.'); } catch (error) { toast(error.message || 'Could not read backup.'); } event.target.value = ''; });
-$('#refresh').addEventListener('click', async () => {
+async function refreshSources({ automatic = false } = {}) {
+  if (refreshInProgress) return;
+  refreshInProgress = true;
   const button = $('#refresh'); button.disabled = true; button.querySelector('span').textContent = 'Checking sources…';
-  try { const response = await fetch('./api/refresh', { method: 'POST', signal: AbortSignal.timeout(90000), headers: { 'Content-Type': 'application/json' }, body: '{}' }); if (!response.ok) throw new Error(response.status === 404 ? 'Source refresh is unavailable here. Add events manually.' : 'Sources are unavailable. Try again later.'); const value = await response.json(); if (!value.events?.length && snapshot.events.length) { snapshot.sources = Array.isArray(value.sources) ? value.sources : snapshot.sources; renderSources(); toast('No new data. Previous results kept; see the source report.'); return; } acceptSnapshot(value); cacheSnapshot(snapshot); toast('Sources checked. See the availability report below.'); } catch (error) { toast(error.name === 'TimeoutError' ? 'The request timed out. Previous results kept.' : error.message); } finally { button.disabled = false; button.querySelector('span').textContent = 'Refresh sources'; }
-});
+  try {
+    const response = await fetch('./api/refresh', { method: 'POST', signal: AbortSignal.timeout(90000), headers: { 'Content-Type': 'application/json' }, body: '{}' });
+    if (!response.ok) throw new Error(response.status === 404 ? 'Source refresh is unavailable here. Add events manually.' : 'Sources are unavailable. Try again later.');
+    const value = await response.json();
+    if (!Array.isArray(value.events)) throw new Error('Invalid event data. Previous results kept.');
+    // A failed source is not proof that its previously found events disappeared.
+    if (Array.isArray(value.sources) && value.sources.length && !value.sources.some(source => source.status === 'ok')) {
+      snapshot.sources = value.sources.slice(0, 50); cacheSnapshot(snapshot); renderSources();
+      $('#notice').hidden = false; $('#notice').textContent = 'Sources unavailable. Showing saved results; see the source report.';
+      if (!automatic) toast('Sources unavailable. Previous results kept; see the source report.');
+      return;
+    }
+    acceptSnapshot(value); cacheSnapshot(snapshot);
+    if (!automatic) toast('Sources checked. See the availability report below.');
+  } catch (error) {
+    if (!automatic) toast(error.name === 'TimeoutError' ? 'The request timed out. Previous results kept.' : error.message);
+    else { $('#notice').hidden = false; $('#notice').textContent = 'Automatic update failed. Showing saved results; try Refresh sources.'; }
+  } finally {
+    refreshInProgress = false; button.disabled = false; button.querySelector('span').textContent = 'Refresh sources';
+  }
+}
+
+function automaticRefreshIfNeeded() {
+  // The standalone iOS app has an on-device collector; the static web version may not.
+  if (!window.RADAR_NATIVE || refreshInProgress) return;
+  const now = Date.now();
+  const checked = Date.parse(snapshot.generatedAt || '');
+  if (Number.isFinite(checked) && checked <= now && now - checked < AUTOMATIC_REFRESH_INTERVAL_MS) return;
+  if (lastAutomaticAttempt && now - lastAutomaticAttempt < AUTOMATIC_RETRY_INTERVAL_MS) return;
+  lastAutomaticAttempt = now;
+  void refreshSources({ automatic: true });
+}
+$('#refresh').addEventListener('click', () => refreshSources());
+window.__radarRefreshIfNeeded = automaticRefreshIfNeeded;
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') automaticRefreshIfNeeded(); });
 
 const importDialog = $('#import-dialog');
 $('#import-url').addEventListener('input', () => { fetchedDraft = null; });
@@ -115,4 +155,4 @@ $('#import-form').addEventListener('submit', event => { event.preventDefault(); 
 });
 
 if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) navigator.serviceWorker.register('./sw.js').catch(() => {});
-render(); initialLoad();
+render(); initialLoad().then(automaticRefreshIfNeeded);

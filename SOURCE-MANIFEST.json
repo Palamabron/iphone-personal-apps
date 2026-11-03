@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-30T16:19:11.199Z",
+  "generatedAt": "2026-11-03T13:52:37.464Z",
   "textLineEndings": "LF",
   "files": [
     {
@@ -9,8 +9,8 @@
     },
     {
       "path": ".github/workflows/focus-native.yml",
-      "bytes": 2224,
-      "sha256": "b9e05c9dad4039c758c326db630608b2fd07571ceb392a6b0e5c335988a6889d"
+      "bytes": 2255,
+      "sha256": "2b3863f2dcde1f20a91331e1d65c452ae64c49fa99a76882f5ff021f5d3ce5c7"
     },
     {
       "path": ".github/workflows/iphone.yml",
@@ -44,13 +44,23 @@
     },
     {
       "path": "apps/focus-tube/ios/FocusApp.swift",
-      "bytes": 12953,
-      "sha256": "6c7ea5531b64b24aa371cbfe19d56d12001e33bdc93cdcd8d01e9d938c0d2602"
+      "bytes": 20150,
+      "sha256": "6e430872f2faef511f392ef3dba34d394661a7e2aa09e4f06e3ffad0876ada32"
+    },
+    {
+      "path": "apps/focus-tube/ios/FocusDiscovery.swift",
+      "bytes": 5951,
+      "sha256": "1ef8b07b1035a019ccbd720027a1c7f4f7811b6b13cf1800f1ad42d11ce27667"
     },
     {
       "path": "apps/focus-tube/ios/FocusPolicy.swift",
       "bytes": 2499,
       "sha256": "81804cde0eefbb1b57a4a77cec0fb9c8c0b2db459e7a024d125f8f1d7d7f86dc"
+    },
+    {
+      "path": "apps/focus-tube/ios/FocusRecommendations.swift",
+      "bytes": 4679,
+      "sha256": "cbbabfc84af8787bdbdcc7b359bbfb4ae48a83030e922d4ebf3bcc1c7f50d282"
     },
     {
       "path": "apps/focus-tube/ios/Main.html",
@@ -89,8 +99,8 @@
     },
     {
       "path": "apps/focus-tube/scripts/build-native-ios.mjs",
-      "bytes": 7319,
-      "sha256": "6c790d16047b3e4c4e7d3cd4e2c1260dcaaadf4ac11abfd7baf9411b11abc6c5"
+      "bytes": 7489,
+      "sha256": "4af05f55c5a942f7c4733208a307c8c0da12b4d31e3283cfabee5896be414d99"
     },
     {
       "path": "apps/focus-tube/scripts/build.mjs",
@@ -109,8 +119,8 @@
     },
     {
       "path": "apps/focus-tube/tests/FocusPolicyTests.swift",
-      "bytes": 1503,
-      "sha256": "3360be72495cb34cc1197a52c36f591e6fbd8475adc7fb7be479c29781fd10e9"
+      "bytes": 2309,
+      "sha256": "3fe8368c1e3731a145b12327b3acf3cb578b26ab1ba907460d61b76539815c14"
     },
     {
       "path": "apps/focus-tube/tests/core.test.mjs",
@@ -134,13 +144,13 @@
     },
     {
       "path": "apps/warsaw-tech-radar/ios/RadarApp.swift",
-      "bytes": 9497,
-      "sha256": "821aa438d4d105db7c622d64335ee7a894db24f6bb09711372f7dd433bfd7018"
+      "bytes": 9965,
+      "sha256": "66eedfe2e0a3acd4e5814ecf470af47ba016d86cf474a53e3167039885b48939"
     },
     {
       "path": "apps/warsaw-tech-radar/lib/collector.mjs",
-      "bytes": 19649,
-      "sha256": "f6ed5be69e42751d6b7f539d253a6395610efa60d666ef86694210e1a915e84a"
+      "bytes": 22532,
+      "sha256": "eac92d6c93484dde1e050fc66555353d079dbd74d3c720f2942e90de6dabccc0"
     },
     {
       "path": "apps/warsaw-tech-radar/lib/core.mjs",
@@ -155,22 +165,22 @@
     {
       "path": "apps/warsaw-tech-radar/scripts/build-ios.mjs",
       "bytes": 6810,
-      "sha256": "b3f5db67a6442bebb9576e2a9b8c26ed84aec64f21fa2989c7a66339ceea6fdd"
+      "sha256": "7570d2ddb3283258e9eb2662efc15a6193fa82bc537323d11f562357dd8af0bb"
     },
     {
       "path": "apps/warsaw-tech-radar/scripts/check-ios-ui.mjs",
-      "bytes": 7555,
-      "sha256": "cbfc78634a451e41dbc89bc23c6b7f02072cb67c0b56009d392a74e7b9fd5114"
+      "bytes": 9137,
+      "sha256": "ec97a3edeae04484023f7f62386674cbc2fcf232e50fa0a05a0a8fc350c9c22c"
     },
     {
       "path": "apps/warsaw-tech-radar/scripts/prepare-ios.mjs",
-      "bytes": 5864,
-      "sha256": "70d1a338caec8b894ae6adf3c63104a4592241b9b7a318971ad123aaceb012a3"
+      "bytes": 5905,
+      "sha256": "3a094392d5657c05f0e16cf586f5ad8ed8f0f407a48cd55a2f03a2129321495a"
     },
     {
       "path": "apps/warsaw-tech-radar/tests/collector.test.mjs",
-      "bytes": 8344,
-      "sha256": "ff0733f37b2a85b36c090dfc9fc622e2587f1c7045b7a4e3a7269f4e72badc9e"
+      "bytes": 11101,
+      "sha256": "c9fcf36692ab7ddbe205927ccdcf60bd61f2c22f860abad18319020ddfdc82e6"
     },
     {
       "path": "apps/warsaw-tech-radar/tests/core.test.mjs",
@@ -179,8 +189,8 @@
     },
     {
       "path": "apps/warsaw-tech-radar/web/app.mjs",
-      "bytes": 16955,
-      "sha256": "219c08e71f87fe7c68f722e7e533e82e81f058fee55ca09722f4bd4c9d353a95"
+      "bytes": 18895,
+      "sha256": "5e9ef33b96657226c251b655d410fb5db1a08928efb8cd698e934b7db84aa958"
     },
     {
       "path": "apps/warsaw-tech-radar/web/apple-touch-icon.png",
@@ -250,7 +260,7 @@
     {
       "path": "scripts/validate-ipa.py",
       "bytes": 3659,
-      "sha256": "b30e3a5053f4dc33ce86721822df463940cb7818f90f842fdf969c34dfdf0b34"
+      "sha256": "db4c34a640f9393b543413573781ee99afe639ef0bdae0b37e95c807c2e2fc28"
     }
   ]
 }

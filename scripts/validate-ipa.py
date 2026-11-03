@@ -26,7 +26,7 @@ for argument in sys.argv[1:]:
         extensions = []
         if 'FocusTubeNative' in package.name:
             assert info['CFBundleIdentifier'] == 'dev.palamabron.focustube.native'
-            assert info['CFBundleShortVersionString'] == '0.3.0'
+            assert info['CFBundleShortVersionString'] == '0.4.0'
             assert not any('.appex/' in name for name in names)
             code = archive.read(app + '/filter.js').decode()
             assert 'installFocusTube' in code and 'data-ft-active' in code
@@ -47,7 +47,7 @@ for argument in sys.argv[1:]:
             extensions.append(extension['CFBundleIdentifier'])
         else:
             assert info['CFBundleIdentifier'] == 'dev.palamabron.warsawtechradar'
-            assert info['CFBundleShortVersionString'] == '0.3.0'
+            assert info['CFBundleShortVersionString'] == '0.4.0'
             html = archive.read(app + '/radar.html').decode()
             assert 'window.RADAR_NATIVE = true' in html and 'nativeCall' in html
         report = {'file': package.name, 'sha256': hashlib.sha256(package.read_bytes()).hexdigest(), 'bytes': package.stat().st_size, 'bundleId': info['CFBundleIdentifier'], 'version': info['CFBundleShortVersionString'], 'minimumIOS': info['MinimumOSVersion'], 'platform': 'iPhoneOS', 'architecture': 'arm64', 'extensions': extensions, 'signed': False, 'deviceTested': False}

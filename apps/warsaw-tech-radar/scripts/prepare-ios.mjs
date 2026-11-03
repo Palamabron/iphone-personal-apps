@@ -63,7 +63,7 @@ html = html.replace('</head>', `<style>${css}</style></head>`);
 const javascript = `${core}\n${collector}\n(() => {\n${bridge}\n${app}\n})();`.replace(/<\/script/gi, '<\\/script');
 html = html.replace('</body>', `<script>\n${javascript}\n</script></body>`).replace('class="brand" href="./"', 'class="brand" href="#"');
 html = html.replace('<strong>Add to your home screen</strong>', '<strong>Your data</strong>')
-  .replace('On iPhone, open in Safari → Share → Add to Home Screen.', 'Your saved choices stay in this app. Use Refresh sources to update events.');
+  .replace('On iPhone, open in Safari → Share → Add to Home Screen.', 'Your saved choices stay in this app. Sources update automatically when you open it; you can also refresh them here.');
 const output = path.join(root, 'build', 'ios', 'resources'); await mkdir(output, { recursive: true });
 await writeFile(path.join(output, 'radar.html'), html);
 console.log('Prepared build/ios/resources/radar.html: shared interface and collector, native local storage, no server.');

@@ -19,7 +19,7 @@ jobs:
       - name: Verify filter and native URL policy
         run: |
           node --test
-          swiftc ios/FocusPolicy.swift tests/FocusPolicyTests.swift -o /tmp/focus-policy-tests
+          swiftc ios/FocusPolicy.swift ios/FocusRecommendations.swift tests/FocusPolicyTests.swift -o /tmp/focus-policy-tests
           /tmp/focus-policy-tests
       - name: Build standalone unsigned iPhone app
         run: node scripts/build-native-ios.mjs

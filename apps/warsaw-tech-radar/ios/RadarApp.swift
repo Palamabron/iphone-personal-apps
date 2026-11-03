@@ -28,6 +28,7 @@ struct RadarBrowser: UIViewRepresentable {
         view.isOpaque = false
         view.backgroundColor = UIColor(red: 0.957, green: 0.965, blue: 0.949, alpha: 1)
         context.coordinator.webView = view
+        NotificationCenter.default.addObserver(context.coordinator, selector: #selector(Coordinator.appDidBecomeActive), name: UIApplication.didBecomeActiveNotification, object: nil)
         if let page = Bundle.main.url(forResource: "radar", withExtension: "html") {
             view.loadFileURL(page, allowingReadAccessTo: page.deletingLastPathComponent())
         }
@@ -38,8 +39,14 @@ struct RadarBrowser: UIViewRepresentable {
 
     final class Coordinator: NSObject, WKScriptMessageHandler, WKNavigationDelegate, WKUIDelegate {
         weak var webView: WKWebView?
+        @objc func appDidBecomeActive() {
+            webView?.evaluateJavaScript("window.__radarRefreshIfNeeded?.()", completionHandler: nil)
+        }
+
+        deinit { NotificationCenter.default.removeObserver(self) }
+
         private let permittedKeys = Set(["warsaw-radar-v1", "warsaw-radar-snapshot-v1"])
-        private let permittedHosts = Set(["luma.com", "www.luma.com", "lu.ma", "www.lu.ma", "evenea.pl", "www.evenea.pl", "app.evenea.pl"])
+        private let permittedHosts = Set(["luma.com", "www.luma.com", "lu.ma", "www.lu.ma", "evenea.pl", "www.evenea.pl", "app.evenea.pl", "www.startupjobs.pl", "startupjobs.pl"])
 
         func userContentController(_ controller: WKUserContentController, didReceive message: WKScriptMessage) {
             guard message.frameInfo.isMainFrame, message.frameInfo.request.url?.isFileURL == true,
@@ -120,7 +127,7 @@ private final class PublicPageReader: NSObject, URLSessionDataDelegate, URLSessi
             let session = URLSession(configuration: config, delegate: self, delegateQueue: nil)
             self.session = session
             var request = URLRequest(url: url)
-            request.setValue("text/html, application/ld+json, application/json", forHTTPHeaderField: "Accept")
+            request.setValue("text/html, application/ld+json, application/feed+json, application/json", forHTTPHeaderField: "Accept")
             request.setValue("WarsawTechRadar/1.0 (personal public event reader)", forHTTPHeaderField: "User-Agent")
             session.dataTask(with: request).resume()
         }
