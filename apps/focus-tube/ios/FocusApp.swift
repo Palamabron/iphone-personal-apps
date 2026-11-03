@@ -166,7 +166,7 @@ struct FocusScreen: View {
                         Spacer()
                         Button { browser.webView.reload() } label: { Image(systemName: "arrow.clockwise") }.accessibilityLabel("Refresh")
                         Spacer()
-                        Button { browser.open(URL(string: "https://m.youtube.com/feed/you")!) } label: { Image(systemName: "person.crop.circle") }.accessibilityLabel("YouTube account")
+                        Button { browser.open(URL(string: "https://m.youtube.com/channel_switcher")!) } label: { Image(systemName: "person.crop.circle") }.accessibilityLabel("YouTube account")
                     }
                 }
             }
@@ -188,7 +188,7 @@ struct FocusScreen: View {
                     Text("Search YouTube without Shorts or an endless feed. Results load 15 at a time.")
                     Text("YouTube handles playback and sign-in. Google may block sign-in here. Premium, picture in picture and background playback need testing on your device. Offline playback is unavailable.")
                     Text("Recommendations are fetched from HackerTube using selected topics and channel names. They are not synced from your account. Saved videos stay on this device. This app does not block the official YouTube app.").foregroundStyle(.secondary)
-                    Text("Focus Tube 0.4.0").font(.footnote)
+                    Text("Focus Tube 0.4.1").font(.footnote)
                 }.padding(24) }.navigationTitle("About").toolbar { Button("Done") { showInfo = false } } }
             }
         }
@@ -225,7 +225,7 @@ struct FocusScreen: View {
                     Button { browser.open(URL(string: "https://m.youtube.com/feed/subscriptions")!) } label: {
                         Label("Subscriptions", systemImage: "rectangle.stack").frame(maxWidth: .infinity).padding(.vertical, 8)
                     }
-                    Button { browser.open(URL(string: "https://m.youtube.com/feed/you")!) } label: {
+                    Button { browser.open(URL(string: "https://m.youtube.com/channel_switcher")!) } label: {
                         Label("Account", systemImage: "person.crop.circle").frame(maxWidth: .infinity).padding(.vertical, 8)
                     }
                 }.buttonStyle(.bordered).font(.subheadline.weight(.medium))

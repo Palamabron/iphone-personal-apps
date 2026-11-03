@@ -311,7 +311,7 @@ export function installFocusTube(win, options = {}) {
     const target = createShell("ft-footer");
     if (!target) return;
     if (!target.firstElementChild) {
-      target.replaceChildren(element("div", { className: "ft-summary" }, element("strong", {}, "Focus Tube · filter on"), element("span", { "aria-live": "polite" }), element("div", { className: "ft-links" }, element("a", { href: "/" }, "Search"), element("a", { href: "/feed/you" }, "Account"))), element("button", { type: "button" }, "Show 15 more"));
+      target.replaceChildren(element("div", { className: "ft-summary" }, element("strong", {}, "Focus Tube · filter on"), element("span", { "aria-live": "polite" }), element("div", { className: "ft-links" }, element("a", { href: "/" }, "Search"), element("a", { href: "/channel_switcher" }, "Account"))), element("button", { type: "button" }, "Show 15 more"));
       target.querySelector("button").addEventListener("click", showMore);
     }
     let message = feedback || `${Math.min(cards.length, limit)} shown.`;
