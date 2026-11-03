@@ -32,6 +32,7 @@ final class FocusBrowser: NSObject, ObservableObject, WKNavigationDelegate, WKUI
     @Published var title = "Focus Tube"
     @Published var saved: [SavedFilm] = []
     @Published var canGoBack = false
+    @Published var diagnostics = "Open a YouTube page, then run the check."
     let webView: WKWebView
     private var observations: [NSKeyValueObservation] = []
 
@@ -83,6 +84,23 @@ final class FocusBrowser: NSObject, ObservableObject, WKNavigationDelegate, WKUI
         message = "Saved for later."
     }
     func remove(_ film: SavedFilm) { saved.removeAll { $0.id == film.id }; persist() }
+    func inspectPage() {
+        guard !home, let url = webView.url, FocusPolicy.isYouTube(url) else {
+            diagnostics = "Open the affected YouTube page and try again."
+            return
+        }
+        let script = """
+        (() => {
+          const root = document.documentElement;
+          const count = selector => document.querySelectorAll(selector).length;
+          return JSON.stringify({route: root.getAttribute('data-ft-route') || 'unknown', list: root.getAttribute('data-ft-list') || 'none', cards: count('ytm-video-with-context-renderer,ytm-video-renderer,ytm-rich-item-renderer,ytd-video-renderer,ytd-rich-item-renderer'), signInLinks: count('a[href*="signin"],a[href*="ServiceLogin"]'), listRoots: count('ytm-browse,ytm-search,ytm-section-list-renderer,ytd-browse,ytd-search')});
+        })()
+        """
+        webView.evaluateJavaScript(script) { [weak self] value, error in
+            guard let self else { return }
+            self.diagnostics = error == nil ? (value as? String ?? "Page information unavailable.") : "Could not inspect this page."
+        }
+    }
     private func persist() { if let data = try? JSONEncoder().encode(saved) { UserDefaults.standard.set(data, forKey: "focus.saved.v1") } }
     func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
         // Only top-level navigation is restricted; YouTube's media/CDN requests are left to WebKit.
@@ -188,7 +206,11 @@ struct FocusScreen: View {
                     Text("Search YouTube without Shorts or an endless feed. Results load 15 at a time.")
                     Text("YouTube handles playback and sign-in. Google may block sign-in here. Premium, picture in picture and background playback need testing on your device. Offline playback is unavailable.")
                     Text("Recommendations are fetched from HackerTube using selected topics and channel names. They are not synced from your account. Saved videos stay on this device. This app does not block the official YouTube app.").foregroundStyle(.secondary)
-                    Text("Focus Tube 0.4.1").font(.footnote)
+                    Text("Page check").font(.headline)
+                    Text("Run this while a YouTube page is open. It shows filter state and element counts; it does not show account details or page text.").font(.footnote).foregroundStyle(.secondary)
+                    Button("Check current page") { browser.inspectPage() }.buttonStyle(.bordered)
+                    Text(browser.diagnostics).font(.system(.footnote, design: .monospaced)).textSelection(.enabled)
+                    Text("Focus Tube 0.4.2").font(.footnote)
                 }.padding(24) }.navigationTitle("About").toolbar { Button("Done") { showInfo = false } } }
             }
         }
