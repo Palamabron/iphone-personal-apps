@@ -195,7 +195,7 @@ struct FocusScreen: View {
             .task {
                 if account.signedIn {
                     await account.sync()
-                    await loadSelectedUploads()
+                    if account.syncSucceeded { await loadSelectedUploads() }
                 }
                 await discovery.refreshIfNeeded()
                 while !Task.isCancelled {
@@ -203,7 +203,7 @@ struct FocusScreen: View {
                     guard !Task.isCancelled else { break }
                     if scenePhase == .active {
                         await discovery.refreshIfNeeded()
-                        if account.signedIn { await account.sync(); await loadSelectedUploads() }
+                        if account.signedIn { await account.sync(); if account.syncSucceeded { await loadSelectedUploads() } }
                     }
                 }
             }
@@ -211,7 +211,7 @@ struct FocusScreen: View {
                 if phase == .active {
                     Task {
                         await discovery.refreshIfNeeded()
-                        if account.signedIn { await account.sync(); await loadSelectedUploads() }
+                        if account.signedIn { await account.sync(); if account.syncSucceeded { await loadSelectedUploads() } }
                     }
                 }
             }
@@ -276,19 +276,21 @@ struct FocusScreen: View {
                     } else if !account.signedIn {
                         Button("Connect subscriptions") { Task { await account.signIn(); if account.signedIn { await account.sync() } } }.buttonStyle(.bordered)
                     } else {
+                        if let channel = account.connectedChannel { Text("Connected channel: \(channel)").font(.caption).foregroundStyle(.secondary) }
                         HStack {
-                            Button("Choose channels") { showChannels = true }.buttonStyle(.bordered)
-                            Button("Refresh") { Task { await account.sync(); await loadSelectedUploads() } }.buttonStyle(.bordered).disabled(account.busy)
+                            Button("Choose channels") { showChannels = true }.buttonStyle(.bordered).disabled(account.busy)
+                            Button("Refresh") { Task { await account.sync(); if account.syncSucceeded { await loadSelectedUploads() } } }.buttonStyle(.bordered).disabled(account.busy)
                             if account.busy { ProgressView().controlSize(.small) }
                         }
-                        if let notice = account.notice { Text(notice).font(.caption).foregroundStyle(.secondary) }
                         ForEach(account.uploads) { video in
                             Button { browser.open(URL(string: "https://m.youtube.com/watch?v=" + video.id)!) } label: {
                                 recommendationRow(FocusRecommendation(id: video.id, title: video.title, channel: video.channel, topic: "Computing", reason: "New from a selected subscription · " + video.publishedAt.formatted(date: .abbreviated, time: .omitted)))
                             }.buttonStyle(.plain)
                         }
                         Button("Disconnect subscriptions", role: .destructive) { account.signOut(); selectedChannelIDs = "" }.font(.footnote)
+                        Button("Reconnect Google account") { Task { await account.signIn(); await account.sync(); if account.syncSucceeded { await loadSelectedUploads() } } }.font(.footnote).disabled(account.busy)
                     }
+                    if let notice = account.notice { Text(notice).font(.caption).foregroundStyle(.secondary) }
                 }
 
                 if !browser.saved.isEmpty {
@@ -389,7 +391,8 @@ struct FocusScreen: View {
     private var selectedIDs: Set<String> { Set(selectedChannelIDs.split(separator: ",").map(String.init)) }
     private func loadSelectedUploads() async {
         let selected = account.channels.filter { selectedIDs.contains($0.id) }
-        if selected.isEmpty { account.clearUploads() }
+        if selectedIDs.isEmpty { account.clearUploads() }
+        else if selected.isEmpty { return }
         else { await account.loadUploads(for: selected) }
     }
     private var subscriptionPicker: some View {
@@ -404,13 +407,13 @@ struct FocusScreen: View {
                             selectedChannelIDs = selection.sorted().joined(separator: ",")
                         } label: {
                             HStack { Text(channel.title); Spacer(); if selectedIDs.contains(channel.id) { Image(systemName: "checkmark") } }
-                        }
+                        }.disabled(account.busy)
                     }
                 }
             }.navigationTitle("Subscriptions")
                 .toolbar {
                     ToolbarItem(placement: .confirmationAction) {
-                        Button("Done") { showChannels = false; Task { await loadSelectedUploads() } }
+                        Button("Done") { showChannels = false; Task { await loadSelectedUploads() } }.disabled(account.busy)
                     }
                 }
         }
