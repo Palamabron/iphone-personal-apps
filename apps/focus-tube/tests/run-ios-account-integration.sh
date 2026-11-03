@@ -3,13 +3,24 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-# Reuse the production project generator, then replace only the generated test
-# project's source. Production source files and the IPA are not overwritten.
-node scripts/build-native-ios.mjs > /tmp/focus-account-device-build.log 2>&1 || { tail -100 /tmp/focus-account-device-build.log; exit 1; }
+# Reuse a generated project but copy the small source inputs to a separate
+# temporary project. Never change the project's production source in place.
+mkdir -p build/ios
 PROJECT=$(find build/ios -maxdepth 2 -name FocusTubeNative.xcodeproj -print -quit)
+if [ -z "$PROJECT" ]; then
+  node scripts/build-native-ios.mjs > /tmp/focus-account-device-build.log 2>&1 || { tail -100 /tmp/focus-account-device-build.log; exit 1; }
+  PROJECT=$(find build/ios -maxdepth 2 -name FocusTubeNative.xcodeproj -print -quit)
+fi
 test -n "$PROJECT"
 WORK=$(dirname "$PROJECT")
-cat ios/FocusPolicy.swift ios/FocusOAuthForm.swift ios/FocusYouTubeAccount.swift tests/FocusYouTubeAccountIntegrationTests.swift > "$WORK/FocusApp.swift"
+TEST_WORK=$(mktemp -d "${TMPDIR:-/tmp/}focus-account-test.XXXXXX")
+trap 'rm -rf "$TEST_WORK"' EXIT
+cp -R "$PROJECT" "$TEST_WORK/FocusTubeNative.xcodeproj"
+cp -R "$WORK/Assets.xcassets" "$TEST_WORK/Assets.xcassets"
+cp "$WORK/filter.js" "$TEST_WORK/filter.js"
+if [ -f "$WORK/GoogleConfig.plist" ]; then cp "$WORK/GoogleConfig.plist" "$TEST_WORK/GoogleConfig.plist"; fi
+PROJECT="$TEST_WORK/FocusTubeNative.xcodeproj"
+cat ios/FocusPolicy.swift ios/FocusOAuthForm.swift ios/FocusYouTubeAccount.swift tests/FocusYouTubeAccountIntegrationTests.swift > "$TEST_WORK/FocusApp.swift"
 
 xcodebuild -project "$PROJECT" -scheme FocusTubeNative -configuration Debug -sdk iphonesimulator \
   -destination 'generic/platform=iOS Simulator' -derivedDataPath build/account-test \
@@ -21,6 +32,6 @@ DEVICE=$(xcrun simctl list devices available -j | python3 -c 'import json,sys; d
 xcrun simctl boot "$DEVICE" || true
 xcrun simctl bootstatus "$DEVICE" -b
 xcrun simctl install "$DEVICE" build/account-test/Build/Products/Debug-iphonesimulator/FocusTubeNative.app
-xcrun simctl launch --console --terminate-running-process "$DEVICE" dev.palamabron.focustube.accounttests > /tmp/focus-account-test-output.log 2>&1 || true
+perl -e 'alarm shift; exec @ARGV' 90 xcrun simctl launch --console --terminate-running-process "$DEVICE" dev.palamabron.focustube.accounttests > /tmp/focus-account-test-output.log 2>&1 || true
 cat /tmp/focus-account-test-output.log
 grep -q 'FOCUS_ACCOUNT_TESTS_PASSED' /tmp/focus-account-test-output.log

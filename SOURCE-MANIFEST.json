@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-03T21:58:47.345Z",
+  "generatedAt": "2026-11-03T22:01:02.547Z",
   "textLineEndings": "LF",
   "files": [
     {
@@ -159,8 +159,8 @@
     },
     {
       "path": "apps/focus-tube/tests/FocusYouTubeAccountIntegrationTests.swift",
-      "bytes": 17236,
-      "sha256": "2e47028569a2983922855744a825c3b8f632746f0417597a8e103d4dff86994e"
+      "bytes": 17508,
+      "sha256": "9052f1dbcef8df6e27a5950f28abd49e58e743b9f6ad526e32ea5e0ced9ab93f"
     },
     {
       "path": "apps/focus-tube/tests/core.test.mjs",
@@ -169,8 +169,8 @@
     },
     {
       "path": "apps/focus-tube/tests/run-ios-account-integration.sh",
-      "bytes": 1815,
-      "sha256": "42f63551ec41ed4dfcf6844ac044749bc002d5d6214d50ecfff64e26e63a3413"
+      "bytes": 2402,
+      "sha256": "4e22a914899fd4f0be44aa873b129b013e2161285030d4edbf70bfc86580c4e2"
     },
     {
       "path": "apps/warsaw-tech-radar/data/events.json",

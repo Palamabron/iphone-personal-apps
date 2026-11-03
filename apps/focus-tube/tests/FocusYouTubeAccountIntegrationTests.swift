@@ -286,6 +286,12 @@ struct AccountIntegrationTestApp: App {
     var body: some Scene {
         WindowGroup {
             Text("Running offline subscription tests…").task {
+                Task.detached {
+                    try? await Task.sleep(nanoseconds: 60_000_000_000)
+                    print("FOCUS_ACCOUNT_TESTS_FAILED: Test execution timed out")
+                    fflush(stdout)
+                    exit(1)
+                }
                 do {
                     try await testInvalidCallbacks()
                     try await testPaginationAndUploads()
@@ -294,7 +300,7 @@ struct AccountIntegrationTestApp: App {
                     try await testRefreshTokenSuccess()
                     try await testSignOutDuringRequest()
                     try await testSignOutDuringAuthorization()
-                    try testRedirectDelegate()
+                    try await testRedirectDelegate()
                     try await testNoBearerTokenOnRedirect()
                     print("FOCUS_ACCOUNT_TESTS_PASSED")
                     fflush(stdout)
