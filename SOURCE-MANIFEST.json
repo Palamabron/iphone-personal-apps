@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-03T22:24:12.650Z",
+  "generatedAt": "2026-11-03T22:25:08.678Z",
   "textLineEndings": "LF",
   "files": [
     {
@@ -114,8 +114,8 @@
     },
     {
       "path": "apps/focus-tube/scripts/build-native-ios.mjs",
-      "bytes": 8463,
-      "sha256": "05e4951053da3c999edfe2a7df09ac030c2b1efb3ad7828d5e73ec1376de25ab"
+      "bytes": 8466,
+      "sha256": "416d789ced2b06f97357ea4d73efb3907ba5ffde804e31299dd13d069af75209"
     },
     {
       "path": "apps/focus-tube/scripts/build.mjs",

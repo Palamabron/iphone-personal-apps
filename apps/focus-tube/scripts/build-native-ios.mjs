@@ -3,7 +3,7 @@ import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 const root = fileURLToPath(new URL('../', import.meta.url));
-function run(command, args) { const result = spawnSync(command, args, { cwd: root, stdio: 'inherit' }); if (result.status !== 0) throw new Error('Nieudane polecenie: ' + command); }
+function run(command, args) { const result = spawnSync(command, args, { cwd: root, stdio: 'inherit' }); if (result.status !== 0) throw new Error('Command failed: ' + command); }
 run(process.execPath, ['scripts/build.mjs', '--extension-only']);
 if (process.platform !== 'darwin') throw new Error('HTML prepared. Building an IPA requires macOS/Xcode; use the manual workflow or your own Mac.');
 const output = path.join(root, 'build', 'ios'); await mkdir(output, { recursive: true });
@@ -56,7 +56,7 @@ await writeFile(path.join(project, 'xcshareddata', 'xcschemes', 'FocusTubeNative
 const derived = path.join(work, 'DerivedData');
 run('xcodebuild', ['-project', project, '-scheme', 'FocusTubeNative', '-configuration', 'Release', '-sdk', 'iphoneos', '-destination', 'generic/platform=iOS', '-derivedDataPath', derived, 'CODE_SIGNING_ALLOWED=NO', 'CODE_SIGNING_REQUIRED=NO', 'CODE_SIGN_IDENTITY=', 'build']);
 const products = path.join(derived, 'Build', 'Products', 'Release-iphoneos');
-const app = (await readdir(products)).find(name => name.endsWith('.app')); if (!app) throw new Error('Brak produktu .app.');
+const app = (await readdir(products)).find(name => name.endsWith('.app')); if (!app) throw new Error('No .app product was found.');
 const payload = path.join(work, 'Payload'); await mkdir(payload); await cp(path.join(products, app), path.join(payload, app), { recursive: true });
 run('ditto', ['-c', '-k', '--keepParent', payload, path.join(output, 'FocusTubeNative-unsigned.ipa')]);
 console.log('Built build/ios/FocusTubeNative-unsigned.ipa. Sign with your own account when installing through SideStore.');
