@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-03T21:45:05.935Z",
+  "generatedAt": "2026-11-03T21:47:12.530Z",
   "textLineEndings": "LF",
   "files": [
     {
@@ -9,8 +9,8 @@
     },
     {
       "path": ".github/workflows/focus-native.yml",
-      "bytes": 2490,
-      "sha256": "7cb76f15caed419bbbca29164f049c511384457175c4e1903ce2ed924e86a27b"
+      "bytes": 2633,
+      "sha256": "5e120656845b1dd7f49d6de3c04ca073a8ff18617196ebc2091c695e52b381cf"
     },
     {
       "path": ".github/workflows/iphone.yml",
@@ -58,6 +58,11 @@
       "sha256": "1ef8b07b1035a019ccbd720027a1c7f4f7811b6b13cf1800f1ad42d11ce27667"
     },
     {
+      "path": "apps/focus-tube/ios/FocusOAuthForm.swift",
+      "bytes": 432,
+      "sha256": "a3814bd7308de557a52fa9a87e7db5265a141a9ab774ed937d03a89454b71776"
+    },
+    {
       "path": "apps/focus-tube/ios/FocusPolicy.swift",
       "bytes": 2499,
       "sha256": "81804cde0eefbb1b57a4a77cec0fb9c8c0b2db459e7a024d125f8f1d7d7f86dc"
@@ -69,8 +74,8 @@
     },
     {
       "path": "apps/focus-tube/ios/FocusYouTubeAccount.swift",
-      "bytes": 23889,
-      "sha256": "74ce3626a5e3767c2932d32a88ce9039b7c5ada42b0b0d9d298d1e7b08b57e36"
+      "bytes": 23812,
+      "sha256": "ac65be53e74b7c9d2cec748933c22303e601f4ff8bfc5b6baf36d5a54ae905b6"
     },
     {
       "path": "apps/focus-tube/ios/Main.html",
@@ -109,8 +114,8 @@
     },
     {
       "path": "apps/focus-tube/scripts/build-native-ios.mjs",
-      "bytes": 8381,
-      "sha256": "cf638075b43cfe16a4c706ecc97147f2fa2f1b724e29ae251729b41774e95ea2"
+      "bytes": 8463,
+      "sha256": "05e4951053da3c999edfe2a7df09ac030c2b1efb3ad7828d5e73ec1376de25ab"
     },
     {
       "path": "apps/focus-tube/scripts/build.mjs",
@@ -141,6 +146,11 @@
       "path": "apps/focus-tube/src/filter.js",
       "bytes": 22984,
       "sha256": "5717a184b4cbd234a1785f66d541aa2054e4203ef70bc1b3a14307bb4e1db51b"
+    },
+    {
+      "path": "apps/focus-tube/tests/FocusOAuthFormTests.swift",
+      "bytes": 646,
+      "sha256": "5d885992fcf1daa0a37f7c6a520141cac820236f6aaccadd2f1c0c730989c846"
     },
     {
       "path": "apps/focus-tube/tests/FocusPolicyTests.swift",

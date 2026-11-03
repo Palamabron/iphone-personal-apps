@@ -321,8 +321,8 @@ final class FocusYouTubeAccount: NSObject, ObservableObject, ASWebAuthentication
         var request = URLRequest(url: URL(string: "https://oauth2.googleapis.com/token")!)
         request.httpMethod = "POST"
         request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
-        var components = URLComponents(); components.queryItems = fields.map { URLQueryItem(name: $0.key, value: $0.value) }
-        request.httpBody = components.percentEncodedQuery?.data(using: .utf8)
+        guard let body = FocusOAuthForm.encode(fields) else { throw Failure.invalidResponse }
+        request.httpBody = body
         let (data, response) = try await network.data(for: request)
         guard let response = response as? HTTPURLResponse, (200..<300).contains(response.statusCode), data.count < 100_000 else { throw Failure.authorization }
         return try JSONDecoder().decode(TokenResponse.self, from: data)

@@ -8,7 +8,7 @@ run(process.execPath, ['scripts/build.mjs', '--extension-only']);
 if (process.platform !== 'darwin') throw new Error('HTML prepared. Building an IPA requires macOS/Xcode; use the manual workflow or your own Mac.');
 const output = path.join(root, 'build', 'ios'); await mkdir(output, { recursive: true });
 const work = await mkdtemp(path.join(output, 'focus-native-'));
-await writeFile(path.join(work, 'FocusApp.swift'), (await readFile(path.join(root, 'ios', 'FocusPolicy.swift'), 'utf8')) + '\n' + (await readFile(path.join(root, 'ios', 'FocusRecommendations.swift'), 'utf8')) + '\n' + (await readFile(path.join(root, 'ios', 'FocusDiscovery.swift'), 'utf8')) + '\n' + (await readFile(path.join(root, 'ios', 'FocusYouTubeAccount.swift'), 'utf8')) + '\n' + (await readFile(path.join(root, 'ios', 'FocusApp.swift'), 'utf8')));
+await writeFile(path.join(work, 'FocusApp.swift'), (await readFile(path.join(root, 'ios', 'FocusPolicy.swift'), 'utf8')) + '\n' + (await readFile(path.join(root, 'ios', 'FocusRecommendations.swift'), 'utf8')) + '\n' + (await readFile(path.join(root, 'ios', 'FocusDiscovery.swift'), 'utf8')) + '\n' + (await readFile(path.join(root, 'ios', 'FocusOAuthForm.swift'), 'utf8')) + '\n' + (await readFile(path.join(root, 'ios', 'FocusYouTubeAccount.swift'), 'utf8')) + '\n' + (await readFile(path.join(root, 'ios', 'FocusApp.swift'), 'utf8')));
 const googleClientID = process.env.FOCUS_GOOGLE_IOS_CLIENT_ID || '';
 if (googleClientID && !/^[A-Za-z0-9-]+\.apps\.googleusercontent\.com$/.test(googleClientID)) throw new Error('Invalid iOS Google OAuth client ID.');
 if (googleClientID) {
