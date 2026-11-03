@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-03T21:27:27.946Z",
+  "generatedAt": "2026-11-03T21:34:11.834Z",
   "textLineEndings": "LF",
   "files": [
     {
@@ -16,6 +16,11 @@
       "path": ".github/workflows/iphone.yml",
       "bytes": 1218,
       "sha256": "fb78f3b2acf4f1ab9d525f98b7b122708ab9937109272a457072b4df67aefbea"
+    },
+    {
+      "path": ".github/workflows/premium-probe.yml",
+      "bytes": 722,
+      "sha256": "6e42cb26c52fbc3d7785ee270562e9421588be7769f324ca48aab723dad9784f"
     },
     {
       "path": ".github/workflows/radar-iphone.yml",
@@ -106,6 +111,21 @@
       "path": "apps/focus-tube/scripts/build.mjs",
       "bytes": 2785,
       "sha256": "cdfb627d1d452f8360d80bfdfa846f7b15cb84bc7d1c4288a824fa7054bbaab6"
+    },
+    {
+      "path": "apps/focus-tube/spikes/safari-premium-probe/ProbeApp.swift",
+      "bytes": 1892,
+      "sha256": "82efa0da00525c3e88d6179960d843bf6fd2df03f50d07b2630ebd9405281317"
+    },
+    {
+      "path": "apps/focus-tube/spikes/safari-premium-probe/README.md",
+      "bytes": 2882,
+      "sha256": "190fc01d2026150947e0cc0b20b18d5fd21851eb4079f918f00918099c9d7ec8"
+    },
+    {
+      "path": "apps/focus-tube/spikes/safari-premium-probe/build.mjs",
+      "bytes": 6416,
+      "sha256": "661567057f2058229af200507d62d873a695c37aaecb01c6955843fedd6501e8"
     },
     {
       "path": "apps/focus-tube/src/core.js",

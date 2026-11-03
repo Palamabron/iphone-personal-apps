@@ -1,0 +1,24 @@
+name: Build internal Premium playback probe
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    if: github.event.repository.private == false
+    runs-on: macos-15
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Build isolated iPhone test
+        working-directory: apps/focus-tube/spikes/safari-premium-probe
+        run: node build.mjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: premium-playback-probe
+          path: apps/focus-tube/spikes/safari-premium-probe/build/PremiumProbe-unsigned.ipa
+          retention-days: 3
+          if-no-files-found: error
