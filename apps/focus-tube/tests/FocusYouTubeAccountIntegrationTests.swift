@@ -66,6 +66,7 @@ private final class TestBed {
     var mode = CallbackMode.good
     var stored: Data?
     var challenge: String?
+    var tokenRequests: [URLRequest] = []
     let client = "12345-test.apps.googleusercontent.com"
     let oauthScope = "https://www.googleapis.com/auth/youtube.readonly"
 
@@ -91,6 +92,7 @@ private final class TestBed {
                 if self.mode == .duplicateCode { callback.queryItems?.append(.init(name: "code", value: "second")) }
                 return callback.url!
             },
+            observeTokenRequest: { [unowned self] in self.tokenRequests.append($0) },
             read: { [unowned self] in self.stored },
             write: { [unowned self] in self.stored = $0 },
             delete: { [unowned self] in self.stored = nil }
@@ -154,7 +156,7 @@ private func testPaginationAndUploads() async throws {
     let account = bed.makeAccount()
     await account.signIn()
     try check(account.signInSucceeded && account.hasRefreshToken && bed.stored != nil, "Valid sign-in must persist credentials")
-    let tokenRequest = MockURLProtocol.requests().first { $0.url?.path == "/token" }!
+    guard let tokenRequest = bed.tokenRequests.first else { throw TestFailure(description: "Missing token request") }
     let body = String(data: tokenRequest.httpBody ?? Data(), encoding: .utf8) ?? ""
     try check(body.contains("%2B"), "A plus sign in the authorization code must be percent-encoded")
     try check(bodyItems(tokenRequest).first(where: { $0.name == "code" })?.value == "a+b/=", "The authorization code must round-trip")
@@ -190,8 +192,7 @@ private func testExpiredToken() async throws {
     let bed = TestBed()
     MockURLProtocol.configure { request in
         if request.url?.path == "/token" {
-            let grant = bodyItems(request).first { $0.name == "grant_type" }?.value
-            if grant == "refresh_token" { return Reply(status: 401, json: "{}") }
+            if MockURLProtocol.requests().filter({ $0.url?.path == "/token" }).count > 1 { return Reply(status: 401, json: "{}") }
             return Reply(status: 200, json: #"{"access_token":"expired","refresh_token":"refresh","expires_in":0}"#)
         }
         return Reply(status: 500, json: "{}")
@@ -207,7 +208,7 @@ private func testRefreshTokenSuccess() async throws {
     let bed = TestBed()
     MockURLProtocol.configure { request in
         if request.url?.path == "/token" {
-            if bodyItems(request).first(where: { $0.name == "grant_type" })?.value == "refresh_token" {
+            if MockURLProtocol.requests().filter({ $0.url?.path == "/token" }).count > 1 {
                 return Reply(status: 200, json: #"{"access_token":"new-token","expires_in":3600}"#)
             }
             return Reply(status: 200, json: #"{"access_token":"expired","refresh_token":"refresh","expires_in":0}"#)

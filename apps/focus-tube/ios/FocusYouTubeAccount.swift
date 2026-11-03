@@ -12,6 +12,7 @@ struct FocusAccountTestHooks {
     let clientID: String
     let configuration: URLSessionConfiguration
     let authenticate: (URL, String) async throws -> URL
+    let observeTokenRequest: (URLRequest) -> Void
     let read: () throws -> Data?
     let write: (Data) throws -> Void
     let delete: () -> Void
@@ -365,6 +366,9 @@ final class FocusYouTubeAccount: NSObject, ObservableObject, ASWebAuthentication
         request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
         guard let body = FocusOAuthForm.encode(fields) else { throw Failure.invalidResponse }
         request.httpBody = body
+        #if FOCUS_ACCOUNT_TESTING
+        testHooks?.observeTokenRequest(request)
+        #endif
         let (data, response) = try await network.data(for: request)
         guard let response = response as? HTTPURLResponse, (200..<300).contains(response.statusCode), data.count < 100_000 else { throw Failure.authorization }
         return try JSONDecoder().decode(TokenResponse.self, from: data)
