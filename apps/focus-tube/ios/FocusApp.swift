@@ -153,6 +153,9 @@ struct FocusScreen: View {
     @State private var showInfo = false
     @State private var selectedTopic = "All"
     @StateObject private var discovery = FocusDiscovery()
+    @StateObject private var account = FocusYouTubeAccount()
+    @AppStorage("focus.subscriptionSelection.v1") private var selectedChannelIDs = ""
+    @State private var showChannels = false
     @Environment(\.scenePhase) private var scenePhase
     @FocusState private var typing: Bool
     private let background = FocusTheme.background
@@ -190,6 +193,10 @@ struct FocusScreen: View {
             }
             .alert("Focus Tube", isPresented: Binding(get: { browser.message != nil }, set: { if !$0 { browser.message = nil } })) { Button("OK") { browser.message = nil } } message: { Text(browser.message ?? "") }
             .task {
+                if account.signedIn {
+                    await account.sync()
+                    await loadSelectedUploads()
+                }
                 await discovery.refreshIfNeeded()
                 while !Task.isCancelled {
                     try? await Task.sleep(nanoseconds: 1_800_000_000_000)
@@ -210,9 +217,10 @@ struct FocusScreen: View {
                     Text("Run this while a YouTube page is open. It shows filter state and element counts; it does not show account details or page text.").font(.footnote).foregroundStyle(.secondary)
                     Button("Check current page") { browser.inspectPage() }.buttonStyle(.bordered)
                     Text(browser.diagnostics).font(.system(.footnote, design: .monospaced)).textSelection(.enabled)
-                    Text("Focus Tube 0.4.2").font(.footnote)
+                    Text("Focus Tube 0.5.0 development").font(.footnote)
                 }.padding(24) }.navigationTitle("About").toolbar { Button("Done") { showInfo = false } } }
             }
+            .sheet(isPresented: $showChannels) { subscriptionPicker }
         }
     }
     private var topics: [String] {
@@ -252,6 +260,29 @@ struct FocusScreen: View {
                     }
                 }.buttonStyle(.bordered).font(.subheadline.weight(.medium))
 
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Your channels").font(.title2.bold())
+                    Text("Choose subscribed channels for recent uploads. Google account access for playback is separate.").font(.subheadline).foregroundStyle(.secondary)
+                    if !account.configured {
+                        Text("Subscription sync needs an iOS Google OAuth client configured for this app.").font(.caption).foregroundStyle(.secondary)
+                    } else if !account.signedIn {
+                        Button("Connect subscriptions") { Task { await account.signIn(); if account.signedIn { await account.sync() } } }.buttonStyle(.bordered)
+                    } else {
+                        HStack {
+                            Button("Choose channels") { showChannels = true }.buttonStyle(.bordered)
+                            Button("Refresh") { Task { await account.sync(); await loadSelectedUploads() } }.buttonStyle(.bordered).disabled(account.busy)
+                            if account.busy { ProgressView().controlSize(.small) }
+                        }
+                        if let notice = account.notice { Text(notice).font(.caption).foregroundStyle(.secondary) }
+                        ForEach(account.uploads) { video in
+                            Button { browser.open(URL(string: "https://m.youtube.com/watch?v=" + video.id)!) } label: {
+                                recommendationRow(FocusRecommendation(id: video.id, title: video.title, channel: video.channel, topic: "Computing", reason: "New from a selected subscription · " + video.publishedAt.formatted(date: .abbreviated, time: .omitted)))
+                            }.buttonStyle(.plain)
+                        }
+                        Button("Disconnect subscriptions", role: .destructive) { account.signOut(); selectedChannelIDs = "" }.font(.footnote)
+                    }
+                }
+
                 if !browser.saved.isEmpty {
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Saved videos").font(.title2.bold())
@@ -266,7 +297,7 @@ struct FocusScreen: View {
 
                 VStack(alignment: .leading, spacing: 12) {
                     Text("Explore your interests").font(.title2.bold())
-                    Text("Channel searches inspired by your subscriptions.").font(.subheadline).foregroundStyle(.secondary)
+                    Text("Channel searches based on your interests.").font(.subheadline).foregroundStyle(.secondary)
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 10) {
                             ForEach(FocusRecommendations.channels) { channel in
@@ -347,4 +378,33 @@ struct FocusScreen: View {
         }.padding(10).frame(maxWidth: .infinity, alignment: .leading).background(FocusTheme.surface, in: RoundedRectangle(cornerRadius: FocusTheme.corner))
     }
     private func search() { typing = false; browser.submit(input) }
+    private var selectedIDs: Set<String> { Set(selectedChannelIDs.split(separator: ",").map(String.init)) }
+    private func loadSelectedUploads() async {
+        let selected = account.channels.filter { selectedIDs.contains($0.id) }
+        if selected.isEmpty { account.clearUploads() }
+        else { await account.loadUploads(for: selected) }
+    }
+    private var subscriptionPicker: some View {
+        NavigationStack {
+            List {
+                Section("Choose up to 30 channels") {
+                    ForEach(account.channels) { channel in
+                        Button {
+                            var selection = selectedIDs
+                            if selection.contains(channel.id) { selection.remove(channel.id) }
+                            else if selection.count < 30 { selection.insert(channel.id) }
+                            selectedChannelIDs = selection.sorted().joined(separator: ",")
+                        } label: {
+                            HStack { Text(channel.title); Spacer(); if selectedIDs.contains(channel.id) { Image(systemName: "checkmark") } }
+                        }
+                    }
+                }
+            }.navigationTitle("Subscriptions")
+                .toolbar {
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("Done") { showChannels = false; Task { await loadSelectedUploads() } }
+                    }
+                }
+        }
+    }
 }
