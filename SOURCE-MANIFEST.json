@@ -248,11 +248,6 @@
       "sha256": "6ac0a7a6369801b50f1ad35902804f1bc42aa12db7a5369d9e4502831defa5a9"
     },
     {
-      "path": "scripts/__pycache__/validate-ipa.cpython-312.pyc",
-      "bytes": 7579,
-      "sha256": "e34daef99abb2b27a5a7e0f714bb0b3cf94a072c2f698c121186ccf59f54a805"
-    },
-    {
       "path": "scripts/create-icons.mjs",
       "bytes": 2872,
       "sha256": "120228efdb0816b1c676e6c09c05b414c483dac22b9bab0926156f9aa1df72ac"
