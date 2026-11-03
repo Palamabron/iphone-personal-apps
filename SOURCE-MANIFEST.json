@@ -1,12 +1,7 @@
 {
-  "generatedAt": "2026-11-03T21:53:41.490Z",
+  "generatedAt": "2026-11-03T21:53:56.900Z",
   "textLineEndings": "LF",
   "files": [
-    {
-      "path": ".github/workflows/focus-account-offline-tests.yml",
-      "bytes": 511,
-      "sha256": "5e3f0b9800873205d1994fe3782c8d90a49afd62ee029207170d5807c67d74af"
-    },
     {
       "path": ".github/workflows/focus-device.yml",
       "bytes": 833,
@@ -14,8 +9,8 @@
     },
     {
       "path": ".github/workflows/focus-native.yml",
-      "bytes": 2633,
-      "sha256": "5e120656845b1dd7f49d6de3c04ca073a8ff18617196ebc2091c695e52b381cf"
+      "bytes": 2740,
+      "sha256": "a3bd42cf98b90582b9dc34b624be712b9aee06f0fd096a1dc3256d932d6f75b6"
     },
     {
       "path": ".github/workflows/iphone.yml",

@@ -34,6 +34,8 @@ jobs:
           FOCUS_GOOGLE_IOS_CLIENT_ID: ${{ inputs.google_client_id }}
       - name: Validate iPhone package
         run: python3 ../../scripts/validate-ipa.py build/ios/FocusTubeNative-unsigned.ipa
+      - name: Run offline account integration tests
+        run: bash tests/run-ios-account-integration.sh
       - name: Build and launch simulator app
         run: |
           PROJECT=$(find build/ios -maxdepth 2 -name FocusTubeNative.xcodeproj -print -quit)
