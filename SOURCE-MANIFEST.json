@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-03T13:52:37.464Z",
+  "generatedAt": "2026-11-03T14:02:06.703Z",
   "textLineEndings": "LF",
   "files": [
     {
@@ -29,8 +29,8 @@
     },
     {
       "path": "README.md",
-      "bytes": 2243,
-      "sha256": "dce8caccdc7476d34ee137d023c03602c350e2d0da4fd1eacec6cf770d443723"
+      "bytes": 2437,
+      "sha256": "782deb6154ee641ff8d4e2575c81d782ec30416889c7a53caac6d55a062e34e2"
     },
     {
       "path": "apps/focus-tube/docs/IPHONE_SIDELOAD.md",
@@ -246,6 +246,11 @@
       "path": "docs/INSTALL_IPHONE.md",
       "bytes": 3606,
       "sha256": "6ac0a7a6369801b50f1ad35902804f1bc42aa12db7a5369d9e4502831defa5a9"
+    },
+    {
+      "path": "scripts/__pycache__/validate-ipa.cpython-312.pyc",
+      "bytes": 7579,
+      "sha256": "e34daef99abb2b27a5a7e0f714bb0b3cf94a072c2f698c121186ccf59f54a805"
     },
     {
       "path": "scripts/create-icons.mjs",
