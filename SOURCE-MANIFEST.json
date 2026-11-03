@@ -1,7 +1,12 @@
 {
-  "generatedAt": "2026-11-03T21:47:55.399Z",
+  "generatedAt": "2026-11-03T21:53:41.490Z",
   "textLineEndings": "LF",
   "files": [
+    {
+      "path": ".github/workflows/focus-account-offline-tests.yml",
+      "bytes": 511,
+      "sha256": "5e3f0b9800873205d1994fe3782c8d90a49afd62ee029207170d5807c67d74af"
+    },
     {
       "path": ".github/workflows/focus-device.yml",
       "bytes": 833,
@@ -74,8 +79,8 @@
     },
     {
       "path": "apps/focus-tube/ios/FocusYouTubeAccount.swift",
-      "bytes": 23214,
-      "sha256": "b160f3cda9ba361e0989c222f5862351d9145980dce0ee9512a8b57986b86c61"
+      "bytes": 24854,
+      "sha256": "49bbede374968f623a5bf3a9243551e4e0a2037667fddf48f47e2245b5ec3a19"
     },
     {
       "path": "apps/focus-tube/ios/Main.html",
@@ -158,9 +163,19 @@
       "sha256": "3fe8368c1e3731a145b12327b3acf3cb578b26ab1ba907460d61b76539815c14"
     },
     {
+      "path": "apps/focus-tube/tests/FocusYouTubeAccountIntegrationTests.swift",
+      "bytes": 13288,
+      "sha256": "b45f35b1e37c9fc843b69143237c15a6fb415b4e22d83cf11f2ec8952b58e074"
+    },
+    {
       "path": "apps/focus-tube/tests/core.test.mjs",
       "bytes": 3804,
       "sha256": "00d8c26595537acfe188e1c97a83a1297608021acc0b34abb4089c59b85b8fa0"
+    },
+    {
+      "path": "apps/focus-tube/tests/run-ios-account-integration.sh",
+      "bytes": 1815,
+      "sha256": "42f63551ec41ed4dfcf6844ac044749bc002d5d6214d50ecfff64e26e63a3413"
     },
     {
       "path": "apps/warsaw-tech-radar/data/events.json",
@@ -281,11 +296,6 @@
       "path": "docs/INSTALL_IPHONE.md",
       "bytes": 3606,
       "sha256": "6ac0a7a6369801b50f1ad35902804f1bc42aa12db7a5369d9e4502831defa5a9"
-    },
-    {
-      "path": "scripts/__pycache__/validate-ipa.cpython-312.pyc",
-      "bytes": 7579,
-      "sha256": "e34daef99abb2b27a5a7e0f714bb0b3cf94a072c2f698c121186ccf59f54a805"
     },
     {
       "path": "scripts/create-icons.mjs",

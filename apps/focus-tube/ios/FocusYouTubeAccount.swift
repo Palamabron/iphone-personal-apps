@@ -5,10 +5,26 @@ import CryptoKit
 import Security
 import UIKit
 
+#if FOCUS_ACCOUNT_TESTING
+// Compiled only in the simulator test target. Production always uses the
+// system browser, Keychain and an ephemeral URLSession with redirect blocking.
+struct FocusAccountTestHooks {
+    let clientID: String
+    let configuration: URLSessionConfiguration
+    let authenticate: (URL, String) async throws -> URL
+    let read: () throws -> Data?
+    let write: (Data) throws -> Void
+    let delete: () -> Void
+}
+#endif
+
 /// Google API authorization is independent of the YouTube web player's session.
 /// The OAuth client ID and its reversed URL scheme must be registered at build time.
 @MainActor
 final class FocusYouTubeAccount: NSObject, ObservableObject, ASWebAuthenticationPresentationContextProviding {
+    #if FOCUS_ACCOUNT_TESTING
+    private var testHooks: FocusAccountTestHooks?
+    #endif
     struct Channel: Identifiable, Codable, Hashable {
         let id: String
         let title: String
@@ -106,7 +122,11 @@ final class FocusYouTubeAccount: NSObject, ObservableObject, ASWebAuthentication
     private var uploadsGeneration = 0
     private let noRedirect = NoRedirect()
     private lazy var network: URLSession = {
+        #if FOCUS_ACCOUNT_TESTING
+        let configuration = testHooks?.configuration ?? URLSessionConfiguration.ephemeral
+        #else
         let configuration = URLSessionConfiguration.ephemeral
+        #endif
         configuration.httpCookieStorage = nil
         configuration.httpShouldSetCookies = false
         configuration.urlCache = nil
@@ -115,6 +135,9 @@ final class FocusYouTubeAccount: NSObject, ObservableObject, ASWebAuthentication
     }()
 
     private var clientID: String? {
+        #if FOCUS_ACCOUNT_TESTING
+        if let value = testHooks?.clientID { return value }
+        #endif
         guard let value = Bundle.main.object(forInfoDictionaryKey: "FocusGoogleClientID") as? String,
               value.range(of: #"^[A-Za-z0-9-]+\.apps\.googleusercontent\.com$"#, options: .regularExpression) != nil else { return nil }
         let scheme = value.split(separator: ".").reversed().joined(separator: ".")
@@ -127,6 +150,16 @@ final class FocusYouTubeAccount: NSObject, ObservableObject, ASWebAuthentication
 
     override init() {
         super.init()
+        restoreCredentials()
+    }
+    #if FOCUS_ACCOUNT_TESTING
+    init(testHooks: FocusAccountTestHooks) {
+        self.testHooks = testHooks
+        super.init()
+        restoreCredentials()
+    }
+    #endif
+    private func restoreCredentials() {
         if let client = clientID, let stored = try? readCredentials(), stored.clientID == client {
             credentials = stored
             signedIn = true
@@ -286,7 +319,10 @@ final class FocusYouTubeAccount: NSObject, ObservableObject, ASWebAuthentication
     }
 
     private func authenticate(url: URL, scheme: String) async throws -> URL {
-        try await withCheckedThrowingContinuation { continuation in
+        #if FOCUS_ACCOUNT_TESTING
+        if let hook = testHooks?.authenticate { return try await hook(url, scheme) }
+        #endif
+        return try await withCheckedThrowingContinuation { continuation in
             let auth = ASWebAuthenticationSession(url: url, callbackURLScheme: scheme) { [weak self] url, error in
                 Task { @MainActor in
                     self?.session = nil
@@ -361,6 +397,12 @@ final class FocusYouTubeAccount: NSObject, ObservableObject, ASWebAuthentication
         FocusDuration.seconds(value)
     }
     private func readCredentials() throws -> Credentials? {
+        #if FOCUS_ACCOUNT_TESTING
+        if let hook = testHooks?.read {
+            guard let data = try hook() else { return nil }
+            return try JSONDecoder().decode(Credentials.self, from: data)
+        }
+        #endif
         let query: [String: Any] = [kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: service,
                                     kSecAttrAccount as String: "oauth", kSecReturnData as String: true, kSecMatchLimit as String: kSecMatchLimitOne]
         var item: CFTypeRef?
@@ -371,6 +413,9 @@ final class FocusYouTubeAccount: NSObject, ObservableObject, ASWebAuthentication
     }
     private func writeCredentials(_ value: Credentials) throws {
         let data = try JSONEncoder().encode(value)
+        #if FOCUS_ACCOUNT_TESTING
+        if let hook = testHooks?.write { try hook(data); return }
+        #endif
         let query: [String: Any] = [kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: service, kSecAttrAccount as String: "oauth"]
         let attributes: [String: Any] = [kSecValueData as String: data, kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly]
         let status = SecItemUpdate(query as CFDictionary, attributes as CFDictionary)
@@ -380,6 +425,9 @@ final class FocusYouTubeAccount: NSObject, ObservableObject, ASWebAuthentication
         } else if status != errSecSuccess { throw Failure.security }
     }
     private func deleteCredentials() {
+        #if FOCUS_ACCOUNT_TESTING
+        if let hook = testHooks?.delete { hook(); return }
+        #endif
         SecItemDelete([kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: service, kSecAttrAccount as String: "oauth"] as CFDictionary)
     }
     private enum Failure: LocalizedError {
@@ -400,7 +448,7 @@ private extension Data {
     var base64URL: String { base64EncodedString().replacingOccurrences(of: "+", with: "-").replacingOccurrences(of: "/", with: "_").replacingOccurrences(of: "=", with: "") }
 }
 
-private final class NoRedirect: NSObject, URLSessionTaskDelegate {
+final class NoRedirect: NSObject, URLSessionTaskDelegate {
     func urlSession(_ session: URLSession, task: URLSessionTask, willPerformHTTPRedirection response: HTTPURLResponse,
                     newRequest request: URLRequest, completionHandler: @escaping (URLRequest?) -> Void) { completionHandler(nil) }
 }
