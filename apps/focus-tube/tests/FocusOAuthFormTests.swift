@@ -7,6 +7,9 @@ import Foundation
         precondition(encoded.contains("%2B"), "A plus must not be interpreted as a space")
         let raw = String(encoded.dropFirst("code=".count)).replacingOccurrences(of: "+", with: " ")
         precondition(raw.removingPercentEncoding == original, "Authorization code must survive form decoding")
+        precondition(FocusDuration.seconds("PT3M") == 180)
+        precondition(FocusDuration.seconds("P1DT2H3M4S") == 93784)
+        precondition(FocusDuration.seconds("P") == nil)
         print("OAuth form encoding passed")
     }
 }

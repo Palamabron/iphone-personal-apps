@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-03T21:47:12.530Z",
+  "generatedAt": "2026-11-03T21:47:55.399Z",
   "textLineEndings": "LF",
   "files": [
     {
@@ -59,8 +59,8 @@
     },
     {
       "path": "apps/focus-tube/ios/FocusOAuthForm.swift",
-      "bytes": 432,
-      "sha256": "a3814bd7308de557a52fa9a87e7db5265a141a9ab774ed937d03a89454b71776"
+      "bytes": 1240,
+      "sha256": "7321c9d56e4abbfffa988b4cce8e67cc04f712e7d4e3f60c549abfab1d9e57d7"
     },
     {
       "path": "apps/focus-tube/ios/FocusPolicy.swift",
@@ -74,8 +74,8 @@
     },
     {
       "path": "apps/focus-tube/ios/FocusYouTubeAccount.swift",
-      "bytes": 23812,
-      "sha256": "ac65be53e74b7c9d2cec748933c22303e601f4ff8bfc5b6baf36d5a54ae905b6"
+      "bytes": 23214,
+      "sha256": "b160f3cda9ba361e0989c222f5862351d9145980dce0ee9512a8b57986b86c61"
     },
     {
       "path": "apps/focus-tube/ios/Main.html",
@@ -149,8 +149,8 @@
     },
     {
       "path": "apps/focus-tube/tests/FocusOAuthFormTests.swift",
-      "bytes": 646,
-      "sha256": "5d885992fcf1daa0a37f7c6a520141cac820236f6aaccadd2f1c0c730989c846"
+      "bytes": 828,
+      "sha256": "0008b921c504fb0c23955cc3531425f4301319f0d63401986ef4dd3309d1bf13"
     },
     {
       "path": "apps/focus-tube/tests/FocusPolicyTests.swift",

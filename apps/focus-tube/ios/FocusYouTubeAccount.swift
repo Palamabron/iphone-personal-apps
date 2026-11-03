@@ -358,15 +358,7 @@ final class FocusYouTubeAccount: NSObject, ObservableObject, ASWebAuthentication
         id.range(of: #"^UC[A-Za-z0-9_-]{22}$"#, options: .regularExpression) != nil
     }
     nonisolated static func durationSeconds(_ value: String) -> Int? {
-        let pattern = #"^PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?$"#
-        guard let regex = try? NSRegularExpression(pattern: pattern),
-              let match = regex.firstMatch(in: value, range: NSRange(value.startIndex..., in: value)), match.range.length > 2 else { return nil }
-        var total = 0
-        for (index, factor) in [(1, 3600), (2, 60), (3, 1)] {
-            if let range = Range(match.range(at: index), in: value), let component = Int(value[range]), component <= 1_000_000 { total += component * factor }
-            else if match.range(at: index).location != NSNotFound { return nil }
-        }
-        return total
+        FocusDuration.seconds(value)
     }
     private func readCredentials() throws -> Credentials? {
         let query: [String: Any] = [kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: service,
