@@ -10,6 +10,12 @@ test('reject unsafe source URLs and timezone-free dates', () => {
   assert.equal(normalizeEvent({ ...fixture, title: '' }), null);
 });
 test('unknown prices stay unknown and free is explicit', () => { assert.equal(priceLabel(normalizeEvent(fixture).price), 'Price unknown'); assert.equal(priceLabel({ kind: 'free' }), 'Free'); });
+test('event covers survive normalization and partial updates; unsafe URLs are rejected', () => {
+  const cover = 'https://images.lumacdn.com/uploads/test.png';
+  assert.equal(normalizeEvent({ ...fixture, imageUrl: 'https://127.0.0.1/a' }).imageUrl, null);
+  const events = mergeEvents([{ ...fixture, imageUrl: cover }], [{ ...fixture, verifiedAt: '2026-10-22T12:00:00Z' }]);
+  assert.equal(events[0].imageUrl, cover);
+});
 test('merging the same URL updates date, not duplicate; separate series URLs remain', () => {
   const values = mergeEvents([fixture], [{ ...fixture, startAt: '2026-10-28T18:00:00+01:00', verifiedAt: '2026-10-22T12:00:00Z' }], [{ ...fixture, id: 'b', url: 'https://luma.com/meetup-2' }]);
   assert.equal(values.length, 2); assert.equal(values[0].startAt, '2026-10-28T17:00:00.000Z');

@@ -9,6 +9,12 @@ export const DEFAULT_SOURCES = Object.freeze([
 ]);
 
 const HOSTS = new Set(['luma.com', 'www.luma.com', 'lu.ma', 'www.lu.ma', 'evenea.pl', 'www.evenea.pl', 'app.evenea.pl', 'www.startupjobs.pl', 'startupjobs.pl']);
+const IMAGE_HOSTS = new Set(['images.lumacdn.com', 'luma.com', 'www.luma.com', 'evenea.pl', 'www.evenea.pl', 'app.evenea.pl', 'www.startupjobs.pl', 'startupjobs.pl']);
+function imageUrl(value, base) {
+  if (Array.isArray(value)) return value.map(item => imageUrl(item, base)).find(Boolean) || null;
+  if (value && typeof value === 'object') return imageUrl(value.url || value.contentUrl, base);
+  try { const url = new URL(value, base); return url.protocol === 'https:' && IMAGE_HOSTS.has(url.hostname) && !url.username && !url.password && (!url.port || url.port === '443') ? url.href : null; } catch { return null; }
+}
 const MAX_BYTES = 2_000_000;
 const TIMEOUT_MS = 12_000;
 const RESERVED_LUMA = new Set(['warsaw', 'polandtechweek', 'warsaw-ai-breakfast', 'tlcwarsaw', 'discover', 'home', 'signin', 'login', 'pricing', 'ios', 'android', 'create', 'calendars', 'settings', 'terms', 'privacy', 'about', 'help', 'search', 'user', 'calendar']);
@@ -113,7 +119,7 @@ function createEvent(raw, sourceUrl, fetchedAt) {
   const labels = { ai: 'AI / ML', startup: 'startupy', product: 'produkt i technologia', networking: 'networking', funding: 'finansowanie' };
   const description = categories.length ? `Topics recognized in the announcement: ${categories.map(key => labels[key]).join(', ')}.` : null;
   return {
-    id: `event-${hash(url)}`, title, description, startAt, endAt,
+    id: `event-${hash(url)}`, title, description, startAt, endAt, imageUrl: imageUrl(raw.image, sourceUrl),
     timezone: clean(raw.timezone, 80) || 'Europe/Warsaw', city, venue, address: fullAddress,
     mode, url, organizer: joinNames(raw.organizer), price: price(raw.offers, raw.isAccessibleForFree),
     categories, language: clean(raw.inLanguage, 30), status: eventStatus(raw.eventStatus, raw.offers),
@@ -149,7 +155,7 @@ function lumaEvent(container, sourceUrl) {
   const tickets = (container.ticket_types || []).filter(ticket => !ticket.is_hidden && !ticket.is_disabled);
   const ticketInfo = container.ticket_info || {};
   const raw = {
-    name: event.name, startDate: event.start_at, endDate: event.end_at, timezone: event.timezone,
+    name: event.name, startDate: event.start_at, endDate: event.end_at, timezone: event.timezone, image: event.cover_url,
     url: event.url ? new URL(event.url, 'https://luma.com/').href : sourceUrl,
     location: { '@type': 'Place', name: hidden ? null : localized.address || geo.address, address: { addressLocality: localized.city || geo.city, streetAddress: hidden ? null : localized.short_address || geo.short_address } },
     eventAttendanceMode: event.location_type === 'online' ? 'OnlineEventAttendanceMode' : event.location_type === 'offline' ? 'OfflineEventAttendanceMode' : null,
@@ -205,7 +211,7 @@ export function parseStartupJobsFeed(content, sourceUrl, fetchedAt = new Date().
     const endDate = startupJobsTime(details.ends_on, details.end_time, details.timezone);
     const priceText = String(details.price || '').trim().toLowerCase();
     const isFree = /^(bezpłatn(?:y|e|ie)|darmow(?:y|e)|free)$/.test(priceText) ? true : undefined;
-    const raw = { name: item.title, description: item.content_text, url, startDate, endDate, timezone: details.timezone,
+    const raw = { name: item.title, description: item.content_text, image: item.image || item.banner_image, url, startDate, endDate, timezone: details.timezone,
       eventAttendanceMode: details.format === 'online' ? 'OnlineEventAttendanceMode' : details.format === 'in_person' ? 'OfflineEventAttendanceMode' : null,
       location: { '@type': 'Place', name: details.venue, address: { addressLocality: details.city, streetAddress: details.address } },
       organizer: details.organizer, isAccessibleForFree: isFree };

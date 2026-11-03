@@ -6,6 +6,14 @@ export function httpUrl(value) {
   try { const u = new URL(value); return ['http:', 'https:'].includes(u.protocol) && !u.username && !u.password ? u.href : null; } catch { return null; }
 }
 
+export function eventImageUrl(value) {
+  try {
+    const url = new URL(value);
+    const hosts = ['images.lumacdn.com', 'luma.com', 'www.luma.com', 'evenea.pl', 'www.evenea.pl', 'app.evenea.pl', 'www.startupjobs.pl', 'startupjobs.pl'];
+    return url.protocol === 'https:' && hosts.includes(url.hostname) && !url.username && !url.password && (!url.port || url.port === '443') ? url.href : null;
+  } catch { return null; }
+}
+
 function clean(value, limit = 500) { return typeof value === 'string' ? value.replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g, '').trim().slice(0, limit) : ''; }
 function strictIso(value) {
   if (typeof value !== 'string') return null;
@@ -24,7 +32,7 @@ export function normalizeEvent(raw) {
   const dateOrNull = strictIso;
   const price = raw.price && ['free', 'paid', 'unknown'].includes(raw.price.kind) ? raw.price : { kind: 'unknown' };
   return {
-    id: clean(raw.id, 300) || url, title, url, startAt,
+    id: clean(raw.id, 300) || url, title, url, startAt, imageUrl: eventImageUrl(raw.imageUrl),
     endAt: dateOrNull(raw.endAt) > startAt ? dateOrNull(raw.endAt) : null, timezone: WARSAW,
     description: clean(raw.description, 900), organizer: clean(raw.organizer, 200),
     city: clean(raw.city, 120), venue: clean(raw.venue, 200), address: clean(raw.address, 300),
@@ -48,6 +56,7 @@ export function mergeEvents(...groups) {
       // Keep the first identity when a newer observation describes the same event.
       // Saved decisions use this identity even when a source changes its own ID.
       if (old) event.id = old.id;
+      if (old && !event.imageUrl) event.imageUrl = old.imageUrl;
       if (old && ['cancelled', 'postponed'].includes(old.status) && !event.sources.some(s => s.url.replace(/\/$/, '') === key)) {
         event.status = old.status;
       }

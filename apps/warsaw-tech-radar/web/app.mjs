@@ -35,6 +35,7 @@ function card(event) {
   const address = event.venue && event.address && event.venue !== event.address ? event.address : (!event.venue && !event.address ? 'Check the exact location with the organizer' : '');
   const description = event.description && !['Tematy rozpoznane w ogłoszeniu:', 'Topics recognized in the announcement:'].some(prefix => event.description.startsWith(prefix)) ? `<p>${esc(event.description)}</p>` : '';
   return `<article class="event-card ${event.status === 'cancelled' ? 'cancelled' : ''}" data-event="${esc(event.id)}">
+    ${event.imageUrl ? `<img class="event-cover" src="${esc(event.imageUrl)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.hidden=true">` : ''}
     <div class="event-top"><p class="event-time"><time datetime="${esc(event.startAt)}">${esc(hours)}</time></p><span class="price-label ${event.price.kind === 'free' ? 'free' : ''}">${esc(priceLabel(event.price))}</span></div>
     <h3><a href="${esc(event.url)}" target="_blank" rel="noopener noreferrer">${esc(event.title)}</a></h3>
     ${flags[event.status] ? `<p class="event-status ${event.status === 'cancelled' ? 'cancelled' : ''}">${esc(flags[event.status])}</p>` : ''}

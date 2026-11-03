@@ -6,6 +6,14 @@ const fetchedAt = '2026-10-21T12:00:00.000Z';
 const event = (changes = {}) => ({ '@type': 'Event', name: 'Warsaw ML meetup', startDate: '2026-10-26T18:00:00+01:00', endDate: '2026-10-26T20:00:00+01:00', url: 'https://luma.com/ml-meetup', eventAttendanceMode: 'https://schema.org/OfflineEventAttendanceMode', eventStatus: 'https://schema.org/EventScheduled', location: { '@type': 'Place', name: 'Sala', address: { streetAddress: 'Testowa 1', addressLocality: 'Warszawa' } }, ...changes });
 const html = value => `<script type="application/ld+json">${JSON.stringify(value)}</script>`;
 
+test('event covers are read from structured data and reject unsafe hosts', () => {
+  const cover = 'https://images.lumacdn.com/uploads/test.png?width=400';
+  assert.equal(parseEventPage(html(event({ image: [{ url: cover }] })), 'https://luma.com/test', fetchedAt)[0].imageUrl, cover);
+  assert.equal(parseEventPage(html(event({ image: 'https://evil.example/banner.png' })), 'https://luma.com/test', fetchedAt)[0].imageUrl, null);
+  const next = `<script id="__NEXT_DATA__" type="application/json">${JSON.stringify({ event: { name: 'AI meetup', start_at: '2026-10-26T18:00:00Z', url: 'ml-meetup', cover_url: cover } })}</script>`;
+  assert.equal(parseEventPage(next, 'https://luma.com/ml-meetup', fetchedAt)[0].imageUrl, cover);
+});
+
 test('parses nested JSON-LD ItemLists, several events, offsets and explicit zero price', () => {
   const parsed = parseEventPage(html({ '@type': 'ItemList', itemListElement: [ { item: event({ offers: { price: '0', priceCurrency: 'PLN' } }) }, { item: event({ name: 'Startup pitch', url: 'https://luma.com/startup', startDate: '2026-10-24T18:00:00+02:00', offers: { price: 30, priceCurrency: 'pln' } }) } ] }), 'https://luma.com/warsaw', fetchedAt);
   assert.equal(parsed.length, 2);

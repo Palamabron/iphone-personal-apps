@@ -1,1043 +1,751 @@
 {
   "version": 1,
-  "generatedAt": "2026-10-30T14:55:24.845Z",
+  "generatedAt": "2026-11-03T21:04:24.467Z",
   "events": [
     {
-      "id": "event-144vhh0",
-      "title": "Mix & Match(a): Physical AI Gathering",
-      "url": "https://luma.com/549uwobf",
-      "startAt": "2026-10-26T09:00:00.000Z",
-      "endAt": "2026-10-26T11:00:00.000Z",
+      "id": "event-1wx1m3w",
+      "title": "Founders Connect 7: Vertical x AI, jak zbudować i wykorzystać przewagę domenową",
+      "description": "Topics recognized in the announcement: AI / ML, startupy, networking, finansowanie.",
+      "startAt": "2026-11-04T16:00:00.000Z",
+      "endAt": "2026-11-04T20:00:00.000Z",
+      "imageUrl": "https://www.startupjobs.pl/feed/undefined",
       "timezone": "Europe/Warsaw",
-      "description": "Tematy rozpoznane w ogłoszeniu: AI / ML, startupy, produkt i technologia, networking, finansowanie.",
-      "organizer": "Alicja Zawada, Poland Tech Week, Ewelina Kuna, Jan Lis",
       "city": "Warszawa",
-      "venue": "",
-      "address": "",
-      "language": null,
+      "venue": "Centralny Dom Technologii",
+      "address": "ul. Krucza 50, Warszawa",
       "mode": "in-person",
-      "status": "scheduled",
-      "categories": [
-        "ai",
-        "networking",
-        "startup",
-        "product",
-        "funding"
-      ],
+      "url": "https://www.startupjobs.pl/wydarzenia/4608-founders-connect-7-vertical-x-ai-jak-zbudowac-i-wykorzystac-",
+      "organizer": "Tar Heel Capital Pathfinder",
       "price": {
         "kind": "free",
         "amount": 0,
         "currency": null
       },
-      "verifiedAt": "2026-10-21T13:57:18.827Z",
-      "sources": [
-        {
-          "url": "https://luma.com/polandtechweek",
-          "fetchedAt": "2026-10-21T13:57:14.027Z"
-        },
-        {
-          "url": "https://luma.com/549uwobf",
-          "fetchedAt": "2026-10-21T13:57:18.827Z"
-        }
-      ]
-    },
-    {
-      "id": "event-1lflbbx",
-      "title": "Co-Founder Matching at Poland Tech Week",
-      "url": "https://luma.com/qd8v9kd1",
-      "startAt": "2026-10-26T11:00:00.000Z",
-      "endAt": "2026-10-26T14:30:00.000Z",
-      "timezone": "Europe/Warsaw",
-      "description": "Tematy rozpoznane w ogłoszeniu: AI / ML, startupy, produkt i technologia, networking.",
-      "organizer": "Antler in Continental Europe, Alan Poensgen, Poland Tech Week",
-      "city": "Warsaw",
-      "venue": "",
-      "address": "",
-      "language": null,
-      "mode": "in-person",
-      "status": "scheduled",
-      "categories": [
-        "startup",
-        "networking",
-        "ai",
-        "product"
-      ],
-      "price": {
-        "kind": "free",
-        "amount": 0,
-        "currency": null
-      },
-      "verifiedAt": "2026-10-21T13:57:18.826Z",
-      "sources": [
-        {
-          "url": "https://luma.com/polandtechweek",
-          "fetchedAt": "2026-10-21T13:57:14.027Z"
-        },
-        {
-          "url": "https://luma.com/qd8v9kd1",
-          "fetchedAt": "2026-10-21T13:57:18.826Z"
-        }
-      ]
-    },
-    {
-      "id": "event-1tuvpl5",
-      "title": "Go-to-Market for AI-First Startups",
-      "url": "https://luma.com/sji41ixv",
-      "startAt": "2026-10-26T13:00:00.000Z",
-      "endAt": "2026-10-26T16:30:00.000Z",
-      "timezone": "Europe/Warsaw",
-      "description": "Tematy rozpoznane w ogłoszeniu: AI / ML, startupy, produkt i technologia, networking, finansowanie.",
-      "organizer": "Maciej Szott, Poland Tech Week, Imaguru Startup HUB Warsaw",
-      "city": "Warszawa",
-      "venue": "Imaguru Startup HUB - event space|przestrzeń eventowa, recording studio|studio nagrań, coworking, biura na wynajem",
-      "address": "Twarda 14/16, Warszawa",
-      "language": null,
-      "mode": "in-person",
-      "status": "scheduled",
       "categories": [
         "ai",
         "startup",
-        "product",
         "networking",
         "funding"
       ],
-      "price": {
-        "kind": "free",
-        "amount": 0,
-        "currency": null
-      },
-      "verifiedAt": "2026-10-21T13:57:14.992Z",
-      "sources": [
-        {
-          "url": "https://luma.com/warsaw",
-          "fetchedAt": "2026-10-21T13:57:13.724Z"
-        },
-        {
-          "url": "https://luma.com/polandtechweek",
-          "fetchedAt": "2026-10-21T13:57:14.027Z"
-        },
-        {
-          "url": "https://luma.com/sji41ixv",
-          "fetchedAt": "2026-10-21T13:57:14.992Z"
-        }
-      ]
-    },
-    {
-      "id": "event-ot0b36",
-      "title": "POLAND TECH WEEK OPENING",
-      "url": "https://luma.com/lgg2gzxf",
-      "startAt": "2026-10-26T17:00:00.000Z",
-      "endAt": "2026-10-26T21:00:00.000Z",
-      "timezone": "Europe/Warsaw",
-      "description": "Tematy rozpoznane w ogłoszeniu: startupy, finansowanie.",
-      "organizer": "Jan Lis, Giovanni Antonelli, Poland Tech Week, Maciej Wojciechowski",
-      "city": "Warszawa",
-      "venue": "",
-      "address": "",
       "language": null,
-      "mode": "in-person",
-      "status": "scheduled",
-      "categories": [
-        "startup",
-        "funding"
-      ],
-      "price": {
-        "kind": "free",
-        "amount": 0,
-        "currency": null
-      },
-      "verifiedAt": "2026-10-21T13:57:17.149Z",
+      "status": "unknown",
       "sources": [
         {
-          "url": "https://luma.com/lgg2gzxf",
-          "fetchedAt": "2026-10-21T13:57:17.149Z"
+          "url": "https://www.startupjobs.pl/feed/events.json",
+          "fetchedAt": "2026-11-03T21:04:21.750Z"
         }
-      ]
+      ],
+      "verifiedAt": "2026-11-03T21:04:21.750Z"
     },
     {
-      "id": "event-1bxvhe0",
-      "title": "Ladies in Tech: breakfast & connect",
-      "url": "https://luma.com/7obupj79",
-      "startAt": "2026-10-27T07:30:00.000Z",
-      "endAt": "2026-10-27T09:00:00.000Z",
+      "id": "event-1s7c333",
+      "title": "E-commerce B2B 2026",
+      "description": "Topics recognized in the announcement: AI / ML.",
+      "startAt": "2026-11-05T08:00:00.000Z",
+      "endAt": null,
+      "imageUrl": "https://www.startupjobs.pl/feed/undefined",
       "timezone": "Europe/Warsaw",
-      "description": "Tematy rozpoznane w ogłoszeniu: startupy, produkt i technologia, networking, finansowanie.",
-      "organizer": "Inês Boska, Divyanshi Dhouni, Poland Tech Week",
       "city": "Warszawa",
-      "venue": "Lusso Cafe | Coffee, Breakfast, Desserts | Cafe Warszawa",
-      "address": "Krucza 23/m44, Warszawa",
-      "language": null,
+      "venue": "Sound Garden Hotel",
+      "address": "Żwirki i Wigury 18, Warszawa",
       "mode": "in-person",
-      "status": "scheduled",
-      "categories": [
-        "startup",
-        "product",
-        "networking",
-        "funding"
-      ],
+      "url": "https://www.startupjobs.pl/wydarzenia/458-e-commerce-b2b-2026",
+      "organizer": "ProMedia",
       "price": {
-        "kind": "free",
-        "amount": 0,
+        "kind": "unknown",
+        "amount": null,
         "currency": null
       },
-      "verifiedAt": "2026-10-21T13:57:20.430Z",
-      "sources": [
-        {
-          "url": "https://luma.com/7obupj79",
-          "fetchedAt": "2026-10-21T13:57:20.430Z"
-        }
-      ]
-    },
-    {
-      "id": "event-1m7jqel",
-      "title": "Balnord x Project A: The Pitch Table",
-      "url": "https://luma.com/gzxatgro",
-      "startAt": "2026-10-27T11:00:00.000Z",
-      "endAt": "2026-10-27T13:00:00.000Z",
-      "timezone": "Europe/Warsaw",
-      "description": "Tematy rozpoznane w ogłoszeniu: startupy, finansowanie.",
-      "organizer": "Julia Warnel-Hala, Poland Tech Week, Miha Pavlovic, Gabriele Poteliunaite",
-      "city": "Warsaw",
-      "venue": "",
-      "address": "",
-      "language": null,
-      "mode": "in-person",
-      "status": "scheduled",
       "categories": [
-        "funding",
-        "startup"
+        "ai"
       ],
-      "price": {
-        "kind": "free",
-        "amount": 0,
-        "currency": null
-      },
-      "verifiedAt": "2026-10-21T13:57:18.954Z",
+      "language": null,
+      "status": "unknown",
       "sources": [
         {
-          "url": "https://luma.com/polandtechweek",
-          "fetchedAt": "2026-10-21T13:57:14.027Z"
-        },
-        {
-          "url": "https://luma.com/gzxatgro",
-          "fetchedAt": "2026-10-21T13:57:18.954Z"
+          "url": "https://www.startupjobs.pl/feed/events.json",
+          "fetchedAt": "2026-11-03T21:04:21.750Z"
         }
-      ]
+      ],
+      "verifiedAt": "2026-11-03T21:04:21.750Z"
     },
     {
-      "id": "event-1uam3di",
-      "title": "Securing AI: A Conversation with Cyber Leaders",
-      "url": "https://luma.com/f8hdkp5q",
-      "startAt": "2026-10-27T15:00:00.000Z",
-      "endAt": "2026-10-27T19:00:00.000Z",
+      "id": "event-5g0b6s",
+      "title": "Fintech Walk & Talk: Warsaw",
+      "description": "Topics recognized in the announcement: startupy, produkt i technologia, networking.",
+      "startAt": "2026-11-05T11:00:00.000Z",
+      "endAt": "2026-11-05T12:40:00.000Z",
+      "imageUrl": "https://images.lumacdn.com/uploads/e4/2bfe7859-0258-4094-9235-f291804c6798.png",
       "timezone": "Europe/Warsaw",
-      "description": "Tematy rozpoznane w ogłoszeniu: AI / ML, startupy, produkt i technologia, networking, finansowanie.",
-      "organizer": "Poland Tech Week, Ola Denslaw, Evolution Equity Partners",
       "city": "Warszawa",
-      "venue": "Skyfall Warsaw",
-      "address": "Rondo Ignacego Daszyńskiego 1, Warszawa",
-      "language": null,
-      "mode": "in-person",
-      "status": "scheduled",
-      "categories": [
-        "ai",
-        "startup",
-        "product",
-        "networking",
-        "funding"
-      ],
-      "price": {
-        "kind": "free",
-        "amount": 0,
-        "currency": null
-      },
-      "verifiedAt": "2026-10-21T13:57:19.587Z",
-      "sources": [
-        {
-          "url": "https://luma.com/polandtechweek",
-          "fetchedAt": "2026-10-21T13:57:14.027Z"
-        },
-        {
-          "url": "https://luma.com/f8hdkp5q",
-          "fetchedAt": "2026-10-21T13:57:19.587Z"
-        }
-      ]
-    },
-    {
-      "id": "event-xluwcn",
-      "title": "Founders for Founders: The AI Growth Playbook",
-      "url": "https://luma.com/0wt37d21",
-      "startAt": "2026-10-27T16:00:00.000Z",
-      "endAt": "2026-10-27T20:30:00.000Z",
-      "timezone": "Europe/Warsaw",
-      "description": "Tematy rozpoznane w ogłoszeniu: AI / ML, startupy, produkt i technologia, networking.",
-      "organizer": "Przemek Jurgiel-Zyla, Artur Banach, Poland Tech Week, Marcin Kurek, Kamil Węgliński, Bartosz Lipnicki",
-      "city": "Warszawa",
-      "venue": "Rotunda",
+      "venue": "Fontanna przy PKiN południowo-wschodnia",
       "address": "Warszawa",
-      "language": null,
       "mode": "in-person",
-      "status": "scheduled",
-      "categories": [
-        "ai",
-        "startup",
-        "product",
-        "networking"
-      ],
+      "url": "https://luma.com/eeygf27h",
+      "organizer": "Jekaterina Jazova",
       "price": {
         "kind": "free",
         "amount": 0,
         "currency": null
       },
-      "verifiedAt": "2026-10-21T13:57:19.473Z",
-      "sources": [
-        {
-          "url": "https://luma.com/polandtechweek",
-          "fetchedAt": "2026-10-21T13:57:14.027Z"
-        },
-        {
-          "url": "https://luma.com/0wt37d21",
-          "fetchedAt": "2026-10-21T13:57:19.473Z"
-        }
-      ]
-    },
-    {
-      "id": "event-dyyg60",
-      "title": "Product Build Day // Part of Poland Tech Week 2026",
-      "url": "https://luma.com/qkgnf1u4",
-      "startAt": "2026-10-27T16:00:00.000Z",
-      "endAt": "2026-10-27T19:00:00.000Z",
-      "timezone": "Europe/Warsaw",
-      "description": "Tematy rozpoznane w ogłoszeniu: AI / ML, startupy, produkt i technologia, networking, finansowanie.",
-      "organizer": "Anastasiya Khamiankova, Imaguru Startup HUB Warsaw, Marcin Klimaszewski, Poland Tech Week",
-      "city": "Warszawa",
-      "venue": "Imaguru Startup HUB - event space|przestrzeń eventowa, recording studio|studio nagrań, coworking, biura na wynajem",
-      "address": "Twarda 14/16, Warszawa",
-      "language": null,
-      "mode": "in-person",
-      "status": "scheduled",
-      "categories": [
-        "startup",
-        "product",
-        "ai",
-        "networking",
-        "funding"
-      ],
-      "price": {
-        "kind": "free",
-        "amount": 0,
-        "currency": null
-      },
-      "verifiedAt": "2026-10-21T13:57:19.451Z",
-      "sources": [
-        {
-          "url": "https://luma.com/polandtechweek",
-          "fetchedAt": "2026-10-21T13:57:14.027Z"
-        },
-        {
-          "url": "https://luma.com/qkgnf1u4",
-          "fetchedAt": "2026-10-21T13:57:19.451Z"
-        }
-      ]
-    },
-    {
-      "id": "event-pvc1b2",
-      "title": "AI Builders Warsaw - Oct 27",
-      "url": "https://luma.com/waw-oct27",
-      "startAt": "2026-10-27T17:00:00.000Z",
-      "endAt": "2026-10-27T20:00:00.000Z",
-      "timezone": "Europe/Warsaw",
-      "description": "Tematy rozpoznane w ogłoszeniu: AI / ML, startupy, produkt i technologia, networking.",
-      "organizer": "AI Builders, Marta Miler, Kasia Toczko, Mirek Manelski, Poland Tech Week, Blazej (Blaise) Zyglarski",
-      "city": "Warszawa",
-      "venue": "Just Join IT",
-      "address": "Marszałkowska 107, Warszawa",
-      "language": null,
-      "mode": "in-person",
-      "status": "sold-out",
-      "categories": [
-        "ai",
-        "startup",
-        "product",
-        "networking"
-      ],
-      "price": {
-        "kind": "free",
-        "amount": 0,
-        "currency": null
-      },
-      "verifiedAt": "2026-10-21T13:57:20.283Z",
-      "sources": [
-        {
-          "url": "https://luma.com/polandtechweek",
-          "fetchedAt": "2026-10-21T13:57:14.027Z"
-        },
-        {
-          "url": "https://luma.com/waw-oct27",
-          "fetchedAt": "2026-10-21T13:57:20.283Z"
-        }
-      ]
-    },
-    {
-      "id": "event-8lpufl",
-      "title": "Should You Apply to YC? Lessons from Ex-YC Founders",
-      "url": "https://luma.com/sde7u7ib",
-      "startAt": "2026-10-28T12:00:00.000Z",
-      "endAt": "2026-10-28T15:30:00.000Z",
-      "timezone": "Europe/Warsaw",
-      "description": "Tematy rozpoznane w ogłoszeniu: startupy, networking, finansowanie.",
-      "organizer": "Tomasz Kościelniak, Borys Musielak, Maciej Wojciechowski, Poland Tech Week",
-      "city": "Warszawa",
-      "venue": "",
-      "address": "",
-      "language": null,
-      "mode": "in-person",
-      "status": "scheduled",
-      "categories": [
-        "startup",
-        "networking",
-        "funding"
-      ],
-      "price": {
-        "kind": "free",
-        "amount": 0,
-        "currency": null
-      },
-      "verifiedAt": "2026-10-21T13:57:15.146Z",
-      "sources": [
-        {
-          "url": "https://luma.com/warsaw",
-          "fetchedAt": "2026-10-21T13:57:13.724Z"
-        },
-        {
-          "url": "https://luma.com/polandtechweek",
-          "fetchedAt": "2026-10-21T13:57:14.027Z"
-        },
-        {
-          "url": "https://luma.com/sde7u7ib",
-          "fetchedAt": "2026-10-21T13:57:15.146Z"
-        }
-      ]
-    },
-    {
-      "id": "event-7k79sy",
-      "title": "Build Deep – Venture Building Night for Deep Tech Founders",
-      "url": "https://luma.com/kjdpeqkq",
-      "startAt": "2026-10-28T16:00:00.000Z",
-      "endAt": "2026-10-28T22:00:00.000Z",
-      "timezone": "Europe/Warsaw",
-      "description": "Tematy rozpoznane w ogłoszeniu: startupy, finansowanie.",
-      "organizer": "Nate Vasileuski, Ireneusz, Patrycja Zgorzałek, Poland Tech Week",
-      "city": "Warszawa",
-      "venue": "The Heart I Corporate Venture Builder",
-      "address": "Rondo Ignacego Daszyńskiego 1, Warszawa",
-      "language": null,
-      "mode": "in-person",
-      "status": "scheduled",
-      "categories": [
-        "startup",
-        "funding"
-      ],
-      "price": {
-        "kind": "free",
-        "amount": 0,
-        "currency": null
-      },
-      "verifiedAt": "2026-10-21T13:57:14.869Z",
-      "sources": [
-        {
-          "url": "https://luma.com/warsaw",
-          "fetchedAt": "2026-10-21T13:57:13.724Z"
-        },
-        {
-          "url": "https://luma.com/polandtechweek",
-          "fetchedAt": "2026-10-21T13:57:14.027Z"
-        },
-        {
-          "url": "https://luma.com/kjdpeqkq",
-          "fetchedAt": "2026-10-21T13:57:14.869Z"
-        }
-      ]
-    },
-    {
-      "id": "event-13ejvuy",
-      "title": "Forward Deployed Engineering Panel",
-      "url": "https://luma.com/vtsvysms",
-      "startAt": "2026-10-28T16:30:00.000Z",
-      "endAt": "2026-10-28T18:30:00.000Z",
-      "timezone": "Europe/Warsaw",
-      "description": "Tematy rozpoznane w ogłoszeniu: startupy, produkt i technologia.",
-      "organizer": "Szymon Królikowski, Łukasz Jakubowski, Maciej Kończal, Poland Tech Week",
-      "city": "Warszawa",
-      "venue": "",
-      "address": "",
-      "language": null,
-      "mode": "in-person",
-      "status": "scheduled",
       "categories": [
         "product",
-        "startup"
-      ],
-      "price": {
-        "kind": "free",
-        "amount": 0,
-        "currency": null
-      },
-      "verifiedAt": "2026-10-21T13:57:15.681Z",
-      "sources": [
-        {
-          "url": "https://luma.com/warsaw",
-          "fetchedAt": "2026-10-21T13:57:13.724Z"
-        },
-        {
-          "url": "https://luma.com/polandtechweek",
-          "fetchedAt": "2026-10-21T13:57:14.027Z"
-        },
-        {
-          "url": "https://luma.com/vtsvysms",
-          "fetchedAt": "2026-10-21T13:57:15.681Z"
-        }
-      ]
-    },
-    {
-      "id": "event-1tx8ma8",
-      "title": "Cards on the Table by Market One x THL",
-      "url": "https://luma.com/7nrcg6iq",
-      "startAt": "2026-10-28T17:00:00.000Z",
-      "endAt": "2026-10-28T22:00:00.000Z",
-      "timezone": "Europe/Warsaw",
-      "description": "Tematy rozpoznane w ogłoszeniu: startupy.",
-      "organizer": "Szymon Brodziak, Poland Tech Week, Kamil Węgliński, Jakub Kozioł",
-      "city": "Warszawa",
-      "venue": "",
-      "address": "",
-      "language": null,
-      "mode": "in-person",
-      "status": "sold-out",
-      "categories": [
-        "startup"
-      ],
-      "price": {
-        "kind": "free",
-        "amount": 0,
-        "currency": null
-      },
-      "verifiedAt": "2026-10-21T13:57:17.148Z",
-      "sources": [
-        {
-          "url": "https://luma.com/7nrcg6iq",
-          "fetchedAt": "2026-10-21T13:57:17.148Z"
-        }
-      ]
-    },
-    {
-      "id": "event-1qepld1",
-      "title": "FOUNDERS' SOCIETY MEETUP",
-      "url": "https://luma.com/FoundersSociety",
-      "startAt": "2026-10-28T17:00:00.000Z",
-      "endAt": "2026-10-28T21:00:00.000Z",
-      "timezone": "Europe/Warsaw",
-      "description": "Tematy rozpoznane w ogłoszeniu: startupy, networking.",
-      "organizer": "Superteam Poland, Poland Tech Week",
-      "city": "Warszawa",
-      "venue": "",
-      "address": "",
-      "language": null,
-      "mode": "in-person",
-      "status": "scheduled",
-      "categories": [
         "startup",
         "networking"
       ],
-      "price": {
-        "kind": "free",
-        "amount": 0,
-        "currency": null
-      },
-      "verifiedAt": "2026-10-21T13:57:20.319Z",
-      "sources": [
-        {
-          "url": "https://luma.com/polandtechweek",
-          "fetchedAt": "2026-10-21T13:57:14.027Z"
-        },
-        {
-          "url": "https://luma.com/FoundersSociety",
-          "fetchedAt": "2026-10-21T13:57:20.319Z"
-        }
-      ]
-    },
-    {
-      "id": "event-6s0ua9",
-      "title": "Pitch Me Baby, Warsaw vol. 39",
-      "url": "https://luma.com/PMBWAW39",
-      "startAt": "2026-10-28T17:00:00.000Z",
-      "endAt": "2026-10-28T21:00:00.000Z",
-      "timezone": "Europe/Warsaw",
-      "description": "Tematy rozpoznane w ogłoszeniu: startupy, produkt i technologia, networking, finansowanie.",
-      "organizer": "Maciej Majewski, Maciej Koltonski, Piotr Boulangé, Poland Tech Week",
-      "city": "Warszawa",
-      "venue": "Oddział PKO Banku Polskiego",
-      "address": "Rotunda, Marszałkowska 100/102, Warszawa",
       "language": null,
-      "mode": "in-person",
-      "status": "scheduled",
-      "categories": [
-        "funding",
-        "startup",
-        "product",
-        "networking"
-      ],
-      "price": {
-        "kind": "free",
-        "amount": 0,
-        "currency": null
-      },
-      "verifiedAt": "2026-10-21T13:57:15.829Z",
-      "sources": [
-        {
-          "url": "https://luma.com/warsaw",
-          "fetchedAt": "2026-10-21T13:57:13.724Z"
-        },
-        {
-          "url": "https://luma.com/PMBWAW39",
-          "fetchedAt": "2026-10-21T13:57:15.829Z"
-        }
-      ]
-    },
-    {
-      "id": "event-132rkcx",
-      "title": "Stop Playing Referee: How to end priority wars between Product & Eng",
-      "url": "https://luma.com/rp4kf902",
-      "startAt": "2026-10-28T17:00:00.000Z",
-      "endAt": "2026-10-28T18:30:00.000Z",
-      "timezone": "Europe/Warsaw",
-      "description": "Tematy rozpoznane w ogłoszeniu: startupy, produkt i technologia.",
-      "organizer": "Inês Boska, Imaguru Startup HUB Warsaw, Poland Tech Week",
-      "city": "Warszawa",
-      "venue": "Imaguru Startup HUB - event space|przestrzeń eventowa, recording studio|studio nagrań, coworking, biura na wynajem",
-      "address": "Twarda 14/16, Warszawa",
-      "language": null,
-      "mode": "in-person",
       "status": "sold-out",
-      "categories": [
-        "startup",
-        "product"
-      ],
-      "price": {
-        "kind": "free",
-        "amount": 0,
-        "currency": null
-      },
-      "verifiedAt": "2026-10-21T13:57:15.810Z",
       "sources": [
         {
           "url": "https://luma.com/warsaw",
-          "fetchedAt": "2026-10-21T13:57:13.724Z"
+          "fetchedAt": "2026-11-03T21:04:21.573Z"
         },
         {
-          "url": "https://luma.com/polandtechweek",
-          "fetchedAt": "2026-10-21T13:57:14.027Z"
-        },
-        {
-          "url": "https://luma.com/rp4kf902",
-          "fetchedAt": "2026-10-21T13:57:15.810Z"
+          "url": "https://luma.com/eeygf27h",
+          "fetchedAt": "2026-11-03T21:04:22.530Z"
         }
-      ]
-    },
-    {
-      "id": "event-1h7afzg",
-      "title": "Grok Bot Meetup Warsaw",
-      "url": "https://luma.com/spacexai-918j",
-      "startAt": "2026-10-29T16:30:00.000Z",
-      "endAt": "2026-10-29T20:00:00.000Z",
-      "timezone": "Europe/Warsaw",
-      "description": "Tematy rozpoznane w ogłoszeniu: AI / ML, startupy, networking, finansowanie.",
-      "organizer": "Francisco Terpolilli, Kornel Dubieniecki, Tomasz Kościelniak, Poland Tech Week",
-      "city": "Warszawa",
-      "venue": "",
-      "address": "",
-      "language": null,
-      "mode": "in-person",
-      "status": "scheduled",
-      "categories": [
-        "ai",
-        "networking",
-        "startup",
-        "funding"
       ],
-      "price": {
-        "kind": "free",
-        "amount": 0,
-        "currency": null
-      },
-      "verifiedAt": "2026-10-21T13:57:16.191Z",
-      "sources": [
-        {
-          "url": "https://luma.com/warsaw",
-          "fetchedAt": "2026-10-21T13:57:13.724Z"
-        },
-        {
-          "url": "https://luma.com/spacexai-918j",
-          "fetchedAt": "2026-10-21T13:57:16.191Z"
-        }
-      ]
-    },
-    {
-      "id": "event-1bcazul",
-      "title": "Who Survives the SaaS Apocalypse? @ Poland Tech Week 2026",
-      "url": "https://luma.com/mlwv8sah",
-      "startAt": "2026-10-30T08:00:00.000Z",
-      "endAt": "2026-10-30T18:00:00.000Z",
-      "timezone": "Europe/Warsaw",
-      "description": "Tematy rozpoznane w ogłoszeniu: AI / ML, startupy, produkt i technologia, networking, finansowanie.",
-      "organizer": "Damian, Poland Tech Week",
-      "city": "Warszawa",
-      "venue": "Google Campus for Startups",
-      "address": "Centrum Praskie Koneser, Plac Konesera 10, Warszawa",
-      "language": null,
-      "mode": "in-person",
-      "status": "scheduled",
-      "categories": [
-        "startup",
-        "ai",
-        "product",
-        "networking",
-        "funding"
-      ],
-      "price": {
-        "kind": "free",
-        "amount": 0,
-        "currency": null
-      },
-      "verifiedAt": "2026-10-30T14:55:21.268Z",
-      "sources": [
-        {
-          "url": "https://luma.com/warsaw",
-          "fetchedAt": "2026-10-30T14:55:20.419Z"
-        },
-        {
-          "url": "https://luma.com/polandtechweek",
-          "fetchedAt": "2026-10-30T14:55:20.479Z"
-        },
-        {
-          "url": "https://luma.com/mlwv8sah",
-          "fetchedAt": "2026-10-30T14:55:21.268Z"
-        }
-      ]
-    },
-    {
-      "id": "event-hjyma9",
-      "title": "Przegląd Technologiczny#16 FinTech City",
-      "url": "https://luma.com/rry0z4yj",
-      "startAt": "2026-11-03T08:00:00.000Z",
-      "endAt": "2026-11-03T12:30:00.000Z",
-      "timezone": "Europe/Warsaw",
-      "description": "Tematy rozpoznane w ogłoszeniu: AI / ML, startupy, produkt i technologia, networking, finansowanie.",
-      "organizer": "Ewa",
-      "city": "Warszawa",
-      "venue": "CIC Warsaw",
-      "address": "Parking, Chmielna 73, Warszawa",
-      "language": null,
-      "mode": "in-person",
-      "status": "scheduled",
-      "categories": [
-        "product",
-        "ai",
-        "startup",
-        "networking",
-        "funding"
-      ],
-      "price": {
-        "kind": "free",
-        "amount": 0,
-        "currency": null
-      },
-      "verifiedAt": "2026-10-30T14:55:21.364Z",
-      "sources": [
-        {
-          "url": "https://luma.com/warsaw",
-          "fetchedAt": "2026-10-30T14:55:20.419Z"
-        },
-        {
-          "url": "https://luma.com/rry0z4yj",
-          "fetchedAt": "2026-10-30T14:55:21.364Z"
-        }
-      ]
-    },
-    {
-      "id": "event-z3vjd9",
-      "title": "SalesPatriot Challenge: Build the Arsenal",
-      "url": "https://luma.com/qclx2lr8",
-      "startAt": "2026-10-30T08:30:00.000Z",
-      "endAt": "2026-10-30T20:00:00.000Z",
-      "timezone": "Europe/Warsaw",
-      "description": "Tematy rozpoznane w ogłoszeniu: AI / ML, startupy.",
-      "organizer": "Jan Bartkowiak, Maciej Szymczyk, Sophia Morse, Poland Tech Week, Szymon Mielecki",
-      "city": "Warszawa",
-      "venue": "",
-      "address": "",
-      "language": null,
-      "mode": "in-person",
-      "status": "scheduled",
-      "categories": [
-        "ai",
-        "startup"
-      ],
-      "price": {
-        "kind": "free",
-        "amount": 0,
-        "currency": null
-      },
-      "verifiedAt": "2026-10-30T14:55:22.184Z",
-      "sources": [
-        {
-          "url": "https://luma.com/qclx2lr8",
-          "fetchedAt": "2026-10-30T14:55:22.184Z"
-        }
-      ]
-    },
-    {
-      "id": "event-1wua7d2",
-      "title": "STARTUP FOUNDERS STARS #10 #OCT + AFTER-PARTY",
-      "url": "https://luma.com/6fit7ddo",
-      "startAt": "2026-10-30T15:00:00.000Z",
-      "endAt": "2026-10-30T23:00:00.000Z",
-      "timezone": "Europe/Warsaw",
-      "description": "Tematy rozpoznane w ogłoszeniu: AI / ML, startupy, produkt i technologia, networking, finansowanie.",
-      "organizer": "STARTUP FOUNDERS STARS, Poland Tech Week",
-      "city": "Warszawa",
-      "venue": "Warsaw Experience Center - Konferencje, Bankiety, Eventy",
-      "address": "Łazienkowska 3, Warszawa",
-      "language": null,
-      "mode": "in-person",
-      "status": "sold-out",
-      "categories": [
-        "startup",
-        "ai",
-        "product",
-        "networking",
-        "funding"
-      ],
-      "price": {
-        "kind": "free",
-        "amount": 0,
-        "currency": null
-      },
-      "verifiedAt": "2026-10-30T14:55:24.839Z",
-      "sources": [
-        {
-          "url": "https://luma.com/polandtechweek",
-          "fetchedAt": "2026-10-30T14:55:20.479Z"
-        },
-        {
-          "url": "https://luma.com/6fit7ddo",
-          "fetchedAt": "2026-10-30T14:55:24.839Z"
-        }
-      ]
-    },
-    {
-      "id": "event-10ncm72",
-      "title": "START Warsaw x Poland Tech Week Hackathon",
-      "url": "https://luma.com/n3yb17kl",
-      "startAt": "2026-10-30T17:00:00.000Z",
-      "endAt": "2026-10-31T16:00:00.000Z",
-      "timezone": "Europe/Warsaw",
-      "description": "Tematy rozpoznane w ogłoszeniu: AI / ML, startupy, produkt i technologia, networking.",
-      "organizer": "Yauheni Futryn, Patryk Ostern, Adam Pasierski, Poland Tech Week, Konrad Brzoskowski",
-      "city": "Warszawa",
-      "venue": "",
-      "address": "",
-      "language": null,
-      "mode": "in-person",
-      "status": "sold-out",
-      "categories": [
-        "ai",
-        "startup",
-        "product",
-        "networking"
-      ],
-      "price": {
-        "kind": "free",
-        "amount": 0,
-        "currency": null
-      },
-      "verifiedAt": "2026-10-30T14:55:22.358Z",
-      "sources": [
-        {
-          "url": "https://luma.com/n3yb17kl",
-          "fetchedAt": "2026-10-30T14:55:22.358Z"
-        }
-      ]
-    },
-    {
-      "id": "event-1t7nq1l",
-      "title": "Poland Tech Week Finale",
-      "url": "https://luma.com/poland-lscy",
-      "startAt": "2026-10-30T19:00:00.000Z",
-      "endAt": "2026-10-30T23:00:00.000Z",
-      "timezone": "Europe/Warsaw",
-      "description": "Tematy rozpoznane w ogłoszeniu: startupy.",
-      "organizer": "Poland Tech Week, Jan Bartkowiak, Sophia Morse",
-      "city": "Warszawa",
-      "venue": "",
-      "address": "",
-      "language": null,
-      "mode": "in-person",
-      "status": "scheduled",
-      "categories": [
-        "startup"
-      ],
-      "price": {
-        "kind": "free",
-        "amount": 0,
-        "currency": null
-      },
-      "verifiedAt": "2026-10-30T14:55:24.838Z",
-      "sources": [
-        {
-          "url": "https://luma.com/poland-lscy",
-          "fetchedAt": "2026-10-30T14:55:24.838Z"
-        }
-      ]
-    },
-    {
-      "id": "event-1qf8aoj",
-      "title": "Build, Show & Tell @ Hacker Bloc",
-      "url": "https://luma.com/1rybaq80",
-      "startAt": "2026-10-31T16:00:00.000Z",
-      "endAt": "2026-10-31T20:00:00.000Z",
-      "timezone": "Europe/Warsaw",
-      "description": "Tematy rozpoznane w ogłoszeniu: AI / ML, startupy, finansowanie.",
-      "organizer": "Marin Belec, Poland Tech Week",
-      "city": "Warszawa",
-      "venue": "Kosiarzy 21B",
-      "address": "Kosiarzy 21B, Warszawa",
-      "language": null,
-      "mode": "in-person",
-      "status": "scheduled",
-      "categories": [
-        "ai",
-        "startup",
-        "funding"
-      ],
-      "price": {
-        "kind": "free",
-        "amount": 0,
-        "currency": null
-      },
-      "verifiedAt": "2026-10-30T14:55:24.844Z",
-      "sources": [
-        {
-          "url": "https://luma.com/1rybaq80",
-          "fetchedAt": "2026-10-30T14:55:24.844Z"
-        }
-      ]
+      "verifiedAt": "2026-11-03T21:04:22.530Z"
     },
     {
       "id": "event-22ti17",
       "title": "VISION TALKS Offline: Hull Hair",
-      "url": "https://luma.com/687hrwce",
+      "description": "Topics recognized in the announcement: startupy, networking.",
       "startAt": "2026-11-15T10:00:00.000Z",
       "endAt": "2026-11-15T13:00:00.000Z",
+      "imageUrl": "https://images.lumacdn.com/uploads/bc/2e5a464c-b6e8-4d40-97fa-860d0f3ae22a.png",
       "timezone": "Europe/Warsaw",
-      "description": "Tematy rozpoznane w ogłoszeniu: startupy, networking.",
-      "organizer": "Magda Leśnik",
       "city": "Warszawa",
       "venue": "Salon Fryzjerski Hull Hair",
       "address": "Żurawia 26/8, Warszawa",
-      "language": null,
       "mode": "in-person",
-      "status": "scheduled",
-      "categories": [
-        "startup",
-        "networking"
-      ],
+      "url": "https://luma.com/687hrwce",
+      "organizer": "Magda Leśnik",
       "price": {
         "kind": "paid",
         "amount": 220,
         "currency": "PLN"
       },
-      "verifiedAt": "2026-10-30T14:55:24.164Z",
+      "categories": [
+        "startup",
+        "networking"
+      ],
+      "language": null,
+      "status": "scheduled",
       "sources": [
         {
           "url": "https://luma.com/687hrwce",
-          "fetchedAt": "2026-10-30T14:55:24.164Z"
+          "fetchedAt": "2026-11-03T21:04:23.501Z"
         }
-      ]
+      ],
+      "verifiedAt": "2026-11-03T21:04:23.501Z"
+    },
+    {
+      "id": "event-lnby6s",
+      "title": "Warsaw AI Breakfast #5",
+      "description": "Topics recognized in the announcement: AI / ML.",
+      "startAt": "2026-11-17T07:30:00.000Z",
+      "endAt": "2026-11-17T09:30:00.000Z",
+      "imageUrl": "https://www.startupjobs.pl/feed/undefined",
+      "timezone": "Europe/Warsaw",
+      "city": "Warszawa",
+      "venue": "Kolektyw3",
+      "address": "Kolektyw3, Koszykowa 54, 00-675 Warszawa, Poland",
+      "mode": "in-person",
+      "url": "https://luma.com/dtw22d6x",
+      "organizer": "Kolektyw3",
+      "price": {
+        "kind": "unknown",
+        "amount": null,
+        "currency": null
+      },
+      "categories": [
+        "ai"
+      ],
+      "language": null,
+      "status": "unknown",
+      "sources": [
+        {
+          "url": "https://www.startupjobs.pl/feed/events.json",
+          "fetchedAt": "2026-11-03T21:04:21.750Z"
+        }
+      ],
+      "verifiedAt": "2026-11-03T21:04:21.750Z"
+    },
+    {
+      "id": "event-12vb881",
+      "title": "Advanced Threat Summit 2026",
+      "description": "Topics recognized in the announcement: AI / ML.",
+      "startAt": "2026-11-17T08:00:00.000Z",
+      "endAt": null,
+      "imageUrl": "https://www.startupjobs.pl/feed/undefined",
+      "timezone": "Europe/Warsaw",
+      "city": "Warszawa",
+      "venue": "Warsaw Presidential Hotel",
+      "address": "Al. Jerozolimskie 65/79, 00-697 Warszawa",
+      "mode": "unknown",
+      "url": "https://www.startupjobs.pl/wydarzenia/3131-advanced-threat-summit-2026",
+      "organizer": "Evention",
+      "price": {
+        "kind": "unknown",
+        "amount": null,
+        "currency": null
+      },
+      "categories": [
+        "ai"
+      ],
+      "language": null,
+      "status": "unknown",
+      "sources": [
+        {
+          "url": "https://www.startupjobs.pl/feed/events.json",
+          "fetchedAt": "2026-11-03T21:04:21.750Z"
+        }
+      ],
+      "verifiedAt": "2026-11-03T21:04:21.750Z"
+    },
+    {
+      "id": "event-6uo3gu",
+      "title": "JS Poland 2026",
+      "description": "Topics recognized in the announcement: AI / ML.",
+      "startAt": "2026-11-18T07:00:00.000Z",
+      "endAt": null,
+      "imageUrl": "https://www.startupjobs.pl/feed/undefined",
+      "timezone": "Europe/Warsaw",
+      "city": "Warszawa",
+      "venue": "Multikino Złote Tarasy",
+      "address": "Złota 59, Warszawa",
+      "mode": "unknown",
+      "url": "https://www.startupjobs.pl/wydarzenia/460-js-poland-2026",
+      "organizer": "JS Poland",
+      "price": {
+        "kind": "unknown",
+        "amount": null,
+        "currency": null
+      },
+      "categories": [
+        "ai"
+      ],
+      "language": null,
+      "status": "unknown",
+      "sources": [
+        {
+          "url": "https://www.startupjobs.pl/feed/events.json",
+          "fetchedAt": "2026-11-03T21:04:21.750Z"
+        }
+      ],
+      "verifiedAt": "2026-11-03T21:04:21.750Z"
+    },
+    {
+      "id": "event-1e9p2ga",
+      "title": "AI Poland 2026",
+      "description": "Topics recognized in the announcement: AI / ML.",
+      "startAt": "2026-11-19T07:00:00.000Z",
+      "endAt": null,
+      "imageUrl": "https://www.startupjobs.pl/feed/undefined",
+      "timezone": "Europe/Warsaw",
+      "city": "Warszawa",
+      "venue": "Multikino Złote Tarasy",
+      "address": "Złota 59, Warszawa",
+      "mode": "unknown",
+      "url": "https://www.startupjobs.pl/wydarzenia/461-ai-poland-2026",
+      "organizer": "JS Poland",
+      "price": {
+        "kind": "unknown",
+        "amount": null,
+        "currency": null
+      },
+      "categories": [
+        "ai"
+      ],
+      "language": null,
+      "status": "unknown",
+      "sources": [
+        {
+          "url": "https://www.startupjobs.pl/feed/events.json",
+          "fetchedAt": "2026-11-03T21:04:21.750Z"
+        }
+      ],
+      "verifiedAt": "2026-11-03T21:04:21.750Z"
+    },
+    {
+      "id": "event-n1nob",
+      "title": "AI Europe Congress 2026",
+      "description": "Topics recognized in the announcement: AI / ML, produkt i technologia.",
+      "startAt": "2026-11-19T09:30:00.000Z",
+      "endAt": null,
+      "imageUrl": "https://www.startupjobs.pl/feed/undefined",
+      "timezone": "Europe/Warsaw",
+      "city": "Warszawa",
+      "venue": "BEC Financial Technologies",
+      "address": "ul. Emilii Plater 53, Warszawa",
+      "mode": "in-person",
+      "url": "https://www.startupjobs.pl/wydarzenia/2591-ai-europe-congress-2026",
+      "organizer": "BEC Financial Technologies",
+      "price": {
+        "kind": "unknown",
+        "amount": null,
+        "currency": null
+      },
+      "categories": [
+        "ai",
+        "product"
+      ],
+      "language": null,
+      "status": "unknown",
+      "sources": [
+        {
+          "url": "https://www.startupjobs.pl/feed/events.json",
+          "fetchedAt": "2026-11-03T21:04:21.750Z"
+        }
+      ],
+      "verifiedAt": "2026-11-03T21:04:21.750Z"
     },
     {
       "id": "event-10f4u6c",
       "title": "AI Shift Meetup [vol. 2]",
-      "url": "https://luma.com/3wg4wt6o",
+      "description": "Topics recognized in the announcement: AI / ML, startupy, produkt i technologia, networking.",
       "startAt": "2026-11-20T16:00:00.000Z",
       "endAt": "2026-11-20T21:00:00.000Z",
+      "imageUrl": "https://images.lumacdn.com/uploads/h6/23191673-b2ac-4401-9968-445872e75b14.png",
       "timezone": "Europe/Warsaw",
-      "description": "Tematy rozpoznane w ogłoszeniu: AI / ML, startupy, produkt i technologia, networking.",
-      "organizer": "Klim Khaletski, Veronika Lindorenko, Fundacja Ū Hub",
       "city": "Warszawa",
       "venue": "Google Campus for Startups",
       "address": "Centrum Praskie Koneser, Plac Konesera 10, Warszawa",
-      "language": null,
       "mode": "in-person",
-      "status": "scheduled",
+      "url": "https://luma.com/3wg4wt6o",
+      "organizer": "Klim Khaletski, Veronika Lindorenko, Fundacja Ū Hub",
+      "price": {
+        "kind": "paid",
+        "amount": 59,
+        "currency": "PLN"
+      },
       "categories": [
         "ai",
         "networking",
         "startup",
         "product"
       ],
-      "price": {
-        "kind": "paid",
-        "amount": 59,
-        "currency": "PLN"
-      },
-      "verifiedAt": "2026-10-30T14:55:21.531Z",
+      "language": null,
+      "status": "scheduled",
       "sources": [
         {
           "url": "https://luma.com/warsaw",
-          "fetchedAt": "2026-10-30T14:55:20.419Z"
+          "fetchedAt": "2026-11-03T21:04:21.573Z"
         },
         {
           "url": "https://luma.com/3wg4wt6o",
-          "fetchedAt": "2026-10-30T14:55:21.531Z"
+          "fetchedAt": "2026-11-03T21:04:22.546Z"
         }
-      ]
+      ],
+      "verifiedAt": "2026-11-03T21:04:22.546Z"
     },
     {
-      "id": "event-vxzuc2",
-      "title": "European Design Portfolio Night X Warsaw",
-      "url": "https://luma.com/2yamlgny",
-      "startAt": "2026-11-26T18:00:00.000Z",
-      "endAt": "2026-11-26T21:00:00.000Z",
+      "id": "event-meiimu",
+      "title": "GDG DevFest Warsaw 2026",
+      "description": "Topics recognized in the announcement: AI / ML, produkt i technologia.",
+      "startAt": "2026-11-21T08:00:00.000Z",
+      "endAt": "2026-11-21T20:00:00.000Z",
+      "imageUrl": "https://www.startupjobs.pl/feed/undefined",
       "timezone": "Europe/Warsaw",
-      "description": "Tematy rozpoznane w ogłoszeniu: startupy, networking.",
-      "organizer": "Softerflow (Designer Exchange), Imaguru Startup HUB Warsaw",
       "city": "Warszawa",
-      "venue": "Imaguru Startup HUB - event space|przestrzeń eventowa, recording studio|studio nagrań, coworking, biura na wynajem",
-      "address": "Twarda 14/16, Warszawa",
-      "language": null,
+      "venue": "Google for Startups Campus Warsaw",
+      "address": "Plac Konesera 10, Warszawa",
       "mode": "in-person",
-      "status": "scheduled",
+      "url": "https://www.startupjobs.pl/wydarzenia/464-gdg-devfest-warsaw-2026",
+      "organizer": "Google Developer Group Warszawa",
+      "price": {
+        "kind": "unknown",
+        "amount": null,
+        "currency": null
+      },
       "categories": [
-        "startup",
-        "networking"
+        "ai",
+        "product"
       ],
+      "language": null,
+      "status": "unknown",
+      "sources": [
+        {
+          "url": "https://www.startupjobs.pl/feed/events.json",
+          "fetchedAt": "2026-11-03T21:04:21.750Z"
+        }
+      ],
+      "verifiedAt": "2026-11-03T21:04:21.750Z"
+    },
+    {
+      "id": "event-1hz6u3u",
+      "title": "Build Your Edu Platform with Lovable, Warsaw",
+      "description": "Topics recognized in the announcement: startupy.",
+      "startAt": "2026-11-21T13:00:00.000Z",
+      "endAt": "2026-11-21T16:00:00.000Z",
+      "imageUrl": "https://www.startupjobs.pl/feed/undefined",
+      "timezone": "Europe/Warsaw",
+      "city": "Warszawa",
+      "venue": "Imaguru Startup HUB - event space|przestrzeń eventowa",
+      "address": "Imaguru Startup HUB - event space|przestrzeń eventowa, recording studio|studio nagrań, coworking, biura na wynajem, Twarda 14/16, 00-824 Warszawa, Poland",
+      "mode": "in-person",
+      "url": "https://luma.com/0s7p3qts",
+      "organizer": "Imaguru Startup HUB",
+      "price": {
+        "kind": "unknown",
+        "amount": null,
+        "currency": null
+      },
+      "categories": [
+        "startup"
+      ],
+      "language": null,
+      "status": "unknown",
+      "sources": [
+        {
+          "url": "https://www.startupjobs.pl/feed/events.json",
+          "fetchedAt": "2026-11-03T21:04:21.750Z"
+        }
+      ],
+      "verifiedAt": "2026-11-03T21:04:21.750Z"
+    },
+    {
+      "id": "event-hmrqiw",
+      "title": "AI Biznes Forum 2026",
+      "description": "Topics recognized in the announcement: AI / ML.",
+      "startAt": "2026-11-23T08:00:00.000Z",
+      "endAt": null,
+      "imageUrl": "https://www.startupjobs.pl/feed/undefined",
+      "timezone": "Europe/Warsaw",
+      "city": "Warszawa",
+      "venue": "Airport Hotel Okęcie",
+      "address": "ul. 17 Stycznia 24, Warszawa",
+      "mode": "in-person",
+      "url": "https://www.startupjobs.pl/wydarzenia/2592-ai-biznes-forum-2026",
+      "organizer": "Buzz Center",
+      "price": {
+        "kind": "unknown",
+        "amount": null,
+        "currency": null
+      },
+      "categories": [
+        "ai"
+      ],
+      "language": null,
+      "status": "unknown",
+      "sources": [
+        {
+          "url": "https://www.startupjobs.pl/feed/events.json",
+          "fetchedAt": "2026-11-03T21:04:21.750Z"
+        }
+      ],
+      "verifiedAt": "2026-11-03T21:04:21.750Z"
+    },
+    {
+      "id": "event-kivn7u",
+      "title": "AI Enablers #6",
+      "description": "Topics recognized in the announcement: AI / ML.",
+      "startAt": "2026-11-24T17:00:00.000Z",
+      "endAt": "2026-11-24T20:00:00.000Z",
+      "imageUrl": "https://www.startupjobs.pl/feed/undefined",
+      "timezone": "Europe/Warsaw",
+      "city": "Warszawa",
+      "venue": "Demant Technology Centre",
+      "address": "Demant Technology Centre, al. Jana Pawła II 22, 00-133 Warszawa, Poland",
+      "mode": "in-person",
+      "url": "https://luma.com/sdny6t78",
+      "organizer": "AI Enablers",
+      "price": {
+        "kind": "unknown",
+        "amount": null,
+        "currency": null
+      },
+      "categories": [
+        "ai"
+      ],
+      "language": null,
+      "status": "unknown",
+      "sources": [
+        {
+          "url": "https://www.startupjobs.pl/feed/events.json",
+          "fetchedAt": "2026-11-03T21:04:21.750Z"
+        }
+      ],
+      "verifiedAt": "2026-11-03T21:04:21.750Z"
+    },
+    {
+      "id": "event-14c6s49",
+      "title": "Pitch Me Baby, Warsaw vol. 40",
+      "description": "Topics recognized in the announcement: startupy, produkt i technologia, networking, finansowanie.",
+      "startAt": "2026-11-25T17:00:00.000Z",
+      "endAt": "2026-11-25T21:00:00.000Z",
+      "imageUrl": "https://images.lumacdn.com/event-covers/lm/5471c287-dbd4-42b6-b2ea-a498ca62693b.png",
+      "timezone": "Europe/Warsaw",
+      "city": "Warszawa",
+      "venue": "Oddział PKO Banku Polskiego",
+      "address": "Rotunda, Marszałkowska 100/102, Warszawa",
+      "mode": "in-person",
+      "url": "https://luma.com/PMBWAW40",
+      "organizer": "Maciej Majewski, Maciej Koltonski, Piotr Boulangé",
       "price": {
         "kind": "free",
         "amount": 0,
         "currency": null
       },
-      "verifiedAt": "2026-10-30T14:55:22.179Z",
+      "categories": [
+        "funding",
+        "startup",
+        "product",
+        "networking"
+      ],
+      "language": null,
+      "status": "scheduled",
       "sources": [
         {
           "url": "https://luma.com/warsaw",
-          "fetchedAt": "2026-10-30T14:55:20.419Z"
+          "fetchedAt": "2026-11-03T21:04:21.573Z"
+        },
+        {
+          "url": "https://www.startupjobs.pl/feed/events.json",
+          "fetchedAt": "2026-11-03T21:04:21.750Z"
+        },
+        {
+          "url": "https://luma.com/PMBWAW40",
+          "fetchedAt": "2026-11-03T21:04:22.745Z"
+        }
+      ],
+      "verifiedAt": "2026-11-03T21:04:22.745Z"
+    },
+    {
+      "id": "event-1nwmdd1",
+      "title": "29. Konferencja IPMA Polska: Delivering Successfully",
+      "description": "Topics recognized in the announcement: AI / ML.",
+      "startAt": "2026-11-26T07:30:00.000Z",
+      "endAt": null,
+      "imageUrl": "https://www.startupjobs.pl/feed/undefined",
+      "timezone": "Europe/Warsaw",
+      "city": "Warszawa",
+      "venue": "Arche Hotel Krakowska",
+      "address": "al. Krakowska 237, Warszawa",
+      "mode": "in-person",
+      "url": "https://www.startupjobs.pl/wydarzenia/3141-29-konferencja-ipma-polska-delivering-successfully",
+      "organizer": "IPMA Polska",
+      "price": {
+        "kind": "unknown",
+        "amount": null,
+        "currency": null
+      },
+      "categories": [
+        "ai"
+      ],
+      "language": null,
+      "status": "unknown",
+      "sources": [
+        {
+          "url": "https://www.startupjobs.pl/feed/events.json",
+          "fetchedAt": "2026-11-03T21:04:21.750Z"
+        }
+      ],
+      "verifiedAt": "2026-11-03T21:04:21.750Z"
+    },
+    {
+      "id": "event-vxzuc2",
+      "title": "European Design Portfolio Night X Warsaw",
+      "description": "Topics recognized in the announcement: startupy, networking.",
+      "startAt": "2026-11-26T18:00:00.000Z",
+      "endAt": "2026-11-26T21:00:00.000Z",
+      "imageUrl": "https://images.lumacdn.com/uploads/zg/72fc0141-54ae-4c07-b645-8a41bedca032.png",
+      "timezone": "Europe/Warsaw",
+      "city": "Warszawa",
+      "venue": "Imaguru Startup HUB - event space|przestrzeń eventowa, recording studio|studio nagrań, coworking, biura na wynajem",
+      "address": "Twarda 14/16, Warszawa",
+      "mode": "in-person",
+      "url": "https://luma.com/2yamlgny",
+      "organizer": "Softerflow (Designer Exchange), Imaguru Startup HUB Warsaw",
+      "price": {
+        "kind": "free",
+        "amount": 0,
+        "currency": null
+      },
+      "categories": [
+        "startup",
+        "networking"
+      ],
+      "language": null,
+      "status": "sold-out",
+      "sources": [
+        {
+          "url": "https://luma.com/warsaw",
+          "fetchedAt": "2026-11-03T21:04:21.573Z"
+        },
+        {
+          "url": "https://www.startupjobs.pl/feed/events.json",
+          "fetchedAt": "2026-11-03T21:04:21.750Z"
         },
         {
           "url": "https://luma.com/2yamlgny",
-          "fetchedAt": "2026-10-30T14:55:22.179Z"
+          "fetchedAt": "2026-11-03T21:04:23.092Z"
         }
-      ]
+      ],
+      "verifiedAt": "2026-11-03T21:04:23.092Z"
+    },
+    {
+      "id": "event-cjdom",
+      "title": "Pionierzy AI #5 Meetup",
+      "description": "Topics recognized in the announcement: AI / ML, networking.",
+      "startAt": "2026-12-01T16:30:00.000Z",
+      "endAt": "2026-12-01T21:00:00.000Z",
+      "imageUrl": "https://www.startupjobs.pl/feed/undefined",
+      "timezone": "Europe/Warsaw",
+      "city": "Warszawa",
+      "venue": "Rotunda",
+      "address": "Marszałkowska 100, Warszawa",
+      "mode": "in-person",
+      "url": "https://luma.com/dpbewgmo",
+      "organizer": "Personit",
+      "price": {
+        "kind": "free",
+        "amount": 0,
+        "currency": null
+      },
+      "categories": [
+        "ai",
+        "networking"
+      ],
+      "language": null,
+      "status": "unknown",
+      "sources": [
+        {
+          "url": "https://www.startupjobs.pl/feed/events.json",
+          "fetchedAt": "2026-11-03T21:04:21.750Z"
+        }
+      ],
+      "verifiedAt": "2026-11-03T21:04:21.750Z"
+    },
+    {
+      "id": "event-1pcr1in",
+      "title": "AI Builders Warsaw - Dec 2",
+      "description": "Topics recognized in the announcement: AI / ML.",
+      "startAt": "2026-12-02T17:00:00.000Z",
+      "endAt": "2026-12-02T20:00:00.000Z",
+      "imageUrl": "https://www.startupjobs.pl/feed/undefined",
+      "timezone": "Europe/Warsaw",
+      "city": "Warszawa",
+      "venue": "Just Join IT",
+      "address": "Just Join IT, Marszałkowska 107, 00-110 Warszawa, Poland",
+      "mode": "in-person",
+      "url": "https://luma.com/waw-dec2",
+      "organizer": "AI Builders",
+      "price": {
+        "kind": "unknown",
+        "amount": null,
+        "currency": null
+      },
+      "categories": [
+        "ai"
+      ],
+      "language": null,
+      "status": "unknown",
+      "sources": [
+        {
+          "url": "https://www.startupjobs.pl/feed/events.json",
+          "fetchedAt": "2026-11-03T21:04:21.750Z"
+        }
+      ],
+      "verifiedAt": "2026-11-03T21:04:21.750Z"
+    },
+    {
+      "id": "event-1byxlit",
+      "title": "Art of Scala 2026",
+      "description": "Topics recognized in the announcement: AI / ML, produkt i technologia.",
+      "startAt": "2026-12-03T08:00:00.000Z",
+      "endAt": null,
+      "imageUrl": "https://www.startupjobs.pl/feed/undefined",
+      "timezone": "Europe/Warsaw",
+      "city": "Warszawa",
+      "venue": "Golden Floor Tower",
+      "address": "Al. Jerozolimskie 123A, Warszawa",
+      "mode": "unknown",
+      "url": "https://www.startupjobs.pl/wydarzenia/3897-art-of-scala-2026",
+      "organizer": "Evolution Engineering",
+      "price": {
+        "kind": "free",
+        "amount": 0,
+        "currency": null
+      },
+      "categories": [
+        "ai",
+        "product"
+      ],
+      "language": null,
+      "status": "unknown",
+      "sources": [
+        {
+          "url": "https://www.startupjobs.pl/feed/events.json",
+          "fetchedAt": "2026-11-03T21:04:21.750Z"
+        }
+      ],
+      "verifiedAt": "2026-11-03T21:04:21.750Z"
+    },
+    {
+      "id": "event-2dqoth",
+      "title": "Digital HR 2026",
+      "description": "Topics recognized in the announcement: AI / ML.",
+      "startAt": "2026-12-10T07:30:00.000Z",
+      "endAt": null,
+      "imageUrl": "https://www.startupjobs.pl/feed/undefined",
+      "timezone": "Europe/Warsaw",
+      "city": "Warszawa",
+      "venue": "Hotel NYX Warsaw",
+      "address": "Chmielna 71, Warszawa",
+      "mode": "in-person",
+      "url": "https://www.startupjobs.pl/wydarzenia/1900-digital-hr-2026",
+      "organizer": "Praktyczne Szkolenia",
+      "price": {
+        "kind": "unknown",
+        "amount": null,
+        "currency": null
+      },
+      "categories": [
+        "ai"
+      ],
+      "language": null,
+      "status": "unknown",
+      "sources": [
+        {
+          "url": "https://www.startupjobs.pl/feed/events.json",
+          "fetchedAt": "2026-11-03T21:04:21.750Z"
+        }
+      ],
+      "verifiedAt": "2026-11-03T21:04:21.750Z"
+    },
+    {
+      "id": "event-gxgcpi",
+      "title": "AI Builders Warsaw - Jan 13",
+      "description": "Topics recognized in the announcement: AI / ML.",
+      "startAt": "2027-01-13T17:00:00.000Z",
+      "endAt": "2027-01-13T20:00:00.000Z",
+      "imageUrl": "https://www.startupjobs.pl/feed/undefined",
+      "timezone": "Europe/Warsaw",
+      "city": "Warszawa",
+      "venue": "Just Join IT",
+      "address": "Just Join IT, Marszałkowska 107, 00-110 Warszawa, Poland",
+      "mode": "in-person",
+      "url": "https://luma.com/waw-jan13",
+      "organizer": "AI Builders",
+      "price": {
+        "kind": "unknown",
+        "amount": null,
+        "currency": null
+      },
+      "categories": [
+        "ai"
+      ],
+      "language": null,
+      "status": "unknown",
+      "sources": [
+        {
+          "url": "https://www.startupjobs.pl/feed/events.json",
+          "fetchedAt": "2026-11-03T21:04:21.750Z"
+        }
+      ],
+      "verifiedAt": "2026-11-03T21:04:21.750Z"
     }
   ],
   "sources": [
@@ -1045,163 +753,142 @@
       "name": "Luma · Warszawa",
       "url": "https://luma.com/warsaw",
       "status": "ok",
-      "fetchedAt": "2026-10-30T14:55:20.419Z",
-      "count": 14
+      "fetchedAt": "2026-11-03T21:04:21.573Z",
+      "count": 13
     },
     {
       "name": "Poland Tech Week",
       "url": "https://luma.com/polandtechweek",
       "status": "ok",
-      "fetchedAt": "2026-10-30T14:55:20.479Z",
-      "count": 6
+      "fetchedAt": "2026-11-03T21:04:21.312Z",
+      "count": 0
     },
     {
       "name": "Śniadania AI Warszawa",
       "url": "https://luma.com/warsaw-ai-breakfast",
       "status": "ok",
-      "fetchedAt": "2026-10-30T14:55:20.233Z",
+      "fetchedAt": "2026-11-03T21:04:21.122Z",
       "count": 0
     },
     {
       "name": "Tech Leaders Collective Warsaw",
       "url": "https://luma.com/tlcwarsaw",
       "status": "ok",
-      "fetchedAt": "2026-10-30T14:55:20.852Z",
+      "fetchedAt": "2026-11-03T21:04:22.034Z",
       "count": 0
     },
     {
       "name": "Evenea · Warszawa",
       "url": "https://evenea.pl/wydarzenia/warszawa",
       "status": "error",
-      "fetchedAt": "2026-10-30T14:55:20.484Z",
+      "fetchedAt": "2026-11-03T21:04:21.585Z",
       "count": 0,
-      "error": "HTTP 403; źródło może wymagać dostępu lub blokować pobieranie."
+      "error": "HTTP 403; source may require access or block requests."
     },
     {
-      "name": "Strona wydarzenia",
-      "url": "https://luma.com/mlwv8sah",
+      "name": "StartupJobs · public event feed",
+      "url": "https://www.startupjobs.pl/feed/events.json",
       "status": "ok",
-      "fetchedAt": "2026-10-30T14:55:21.268Z",
+      "fetchedAt": "2026-11-03T21:04:21.750Z",
+      "count": 57
+    },
+    {
+      "name": "Event page",
+      "url": "https://luma.com/eeygf27h",
+      "status": "ok",
+      "fetchedAt": "2026-11-03T21:04:22.530Z",
       "count": 1
     },
     {
-      "name": "Strona wydarzenia",
-      "url": "https://luma.com/rry0z4yj",
-      "status": "ok",
-      "fetchedAt": "2026-10-30T14:55:21.364Z",
-      "count": 1
-    },
-    {
-      "name": "Strona wydarzenia",
+      "name": "Event page",
       "url": "https://luma.com/3wg4wt6o",
       "status": "ok",
-      "fetchedAt": "2026-10-30T14:55:21.531Z",
+      "fetchedAt": "2026-11-03T21:04:22.546Z",
       "count": 1
     },
     {
-      "name": "Strona wydarzenia",
+      "name": "Event page",
+      "url": "https://luma.com/PMBWAW40",
+      "status": "ok",
+      "fetchedAt": "2026-11-03T21:04:22.745Z",
+      "count": 1
+    },
+    {
+      "name": "Event page",
       "url": "https://luma.com/2yamlgny",
       "status": "ok",
-      "fetchedAt": "2026-10-30T14:55:22.179Z",
+      "fetchedAt": "2026-11-03T21:04:23.092Z",
       "count": 1
     },
     {
-      "name": "Strona wydarzenia",
-      "url": "https://luma.com/qclx2lr8",
-      "status": "ok",
-      "fetchedAt": "2026-10-30T14:55:22.184Z",
-      "count": 1
-    },
-    {
-      "name": "Strona wydarzenia",
-      "url": "https://luma.com/n3yb17kl",
-      "status": "ok",
-      "fetchedAt": "2026-10-30T14:55:22.358Z",
-      "count": 1
-    },
-    {
-      "name": "Strona wydarzenia",
-      "url": "https://luma.com/r8uqp86l",
-      "status": "ok",
-      "fetchedAt": "2026-10-30T14:55:22.828Z",
-      "count": 1
-    },
-    {
-      "name": "Strona wydarzenia",
-      "url": "https://luma.com/urapthm0",
-      "status": "ok",
-      "fetchedAt": "2026-10-30T14:55:22.822Z",
-      "count": 1
-    },
-    {
-      "name": "Strona wydarzenia",
-      "url": "https://luma.com/x6s6anxi",
-      "status": "ok",
-      "fetchedAt": "2026-10-30T14:55:22.876Z",
-      "count": 1
-    },
-    {
-      "name": "Strona wydarzenia",
+      "name": "Event page",
       "url": "https://luma.com/q42jzawz",
       "status": "ok",
-      "fetchedAt": "2026-10-30T14:55:23.676Z",
+      "fetchedAt": "2026-11-03T21:04:23.087Z",
       "count": 1
     },
     {
-      "name": "Strona wydarzenia",
+      "name": "Event page",
       "url": "https://luma.com/knwu0e7r",
       "status": "ok",
-      "fetchedAt": "2026-10-30T14:55:23.560Z",
+      "fetchedAt": "2026-11-03T21:04:23.161Z",
       "count": 1
     },
     {
-      "name": "Strona wydarzenia",
+      "name": "Event page",
+      "url": "https://luma.com/n8wkb3ry",
+      "status": "ok",
+      "fetchedAt": "2026-11-03T21:04:23.503Z",
+      "count": 1
+    },
+    {
+      "name": "Event page",
       "url": "https://luma.com/5ch8one7",
       "status": "ok",
-      "fetchedAt": "2026-10-30T14:55:23.617Z",
+      "fetchedAt": "2026-11-03T21:04:23.522Z",
       "count": 1
     },
     {
-      "name": "Strona wydarzenia",
+      "name": "Event page",
       "url": "https://luma.com/687hrwce",
       "status": "ok",
-      "fetchedAt": "2026-10-30T14:55:24.164Z",
+      "fetchedAt": "2026-11-03T21:04:23.501Z",
       "count": 1
     },
     {
-      "name": "Strona wydarzenia",
+      "name": "Event page",
+      "url": "https://luma.com/mc86sbib",
+      "status": "ok",
+      "fetchedAt": "2026-11-03T21:04:23.974Z",
+      "count": 1
+    },
+    {
+      "name": "Event page",
+      "url": "https://luma.com/ydwt09x0",
+      "status": "ok",
+      "fetchedAt": "2026-11-03T21:04:23.830Z",
+      "count": 1
+    },
+    {
+      "name": "Event page",
       "url": "https://luma.com/8aue6mzl",
       "status": "ok",
-      "fetchedAt": "2026-10-30T14:55:24.209Z",
+      "fetchedAt": "2026-11-03T21:04:23.844Z",
       "count": 1
     },
     {
-      "name": "Strona wydarzenia",
+      "name": "Event page",
+      "url": "https://luma.com/b683cubq",
+      "status": "ok",
+      "fetchedAt": "2026-11-03T21:04:24.466Z",
+      "count": 1
+    },
+    {
+      "name": "Event page",
       "url": "https://luma.com/app",
       "status": "ok",
-      "fetchedAt": "2026-10-30T14:55:23.979Z",
+      "fetchedAt": "2026-11-03T21:04:24.211Z",
       "count": 0
-    },
-    {
-      "name": "Strona wydarzenia",
-      "url": "https://luma.com/6fit7ddo",
-      "status": "ok",
-      "fetchedAt": "2026-10-30T14:55:24.839Z",
-      "count": 1
-    },
-    {
-      "name": "Strona wydarzenia",
-      "url": "https://luma.com/poland-lscy",
-      "status": "ok",
-      "fetchedAt": "2026-10-30T14:55:24.838Z",
-      "count": 1
-    },
-    {
-      "name": "Strona wydarzenia",
-      "url": "https://luma.com/1rybaq80",
-      "status": "ok",
-      "fetchedAt": "2026-10-30T14:55:24.844Z",
-      "count": 1
     }
   ]
 }

@@ -37,6 +37,7 @@ body{background:var(--paper);-webkit-text-size-adjust:100%}
 .section-heading{margin:26px 0 16px}
 .day-heading{font-size:15px;letter-spacing:.01em;color:var(--green);background:var(--paper)}
 .event-card{border-color:#dce6dd;border-radius:16px;box-shadow:0 2px 9px #173a2410}
+.event-cover{display:block;width:100%;height:auto;max-height:220px;object-fit:cover;border-radius:10px;margin:0 0 18px;background:#edf1ec}.event-cover[hidden]{display:none}
 .event-top{align-items:baseline}
 .event-time{color:var(--green);font-size:16px}
 .event-card h3{font-size:22px;line-height:1.28;letter-spacing:-.35px}
