@@ -16,6 +16,7 @@ private struct Reply {
     let status: Int
     let json: String
     var delay: TimeInterval = 0
+    var redirect: URL? = nil
 }
 
 private final class MockURLProtocol: URLProtocol {
@@ -42,8 +43,16 @@ private final class MockURLProtocol: URLProtocol {
         // No real traffic is permitted, even when a test forgets a handler.
         let reply = handler?(request) ?? Reply(status: 599, json: "{}")
         if reply.delay > 0 { Thread.sleep(forTimeInterval: reply.delay) }
+        var headers = ["Content-Type": "application/json"]
+        if let target = reply.redirect { headers["Location"] = target.absoluteString }
         guard let url = request.url,
-              let response = HTTPURLResponse(url: url, statusCode: reply.status, httpVersion: nil, headerFields: ["Content-Type": "application/json"]) else { return }
+              let response = HTTPURLResponse(url: url, statusCode: reply.status, httpVersion: nil, headerFields: headers) else { return }
+        if let target = reply.redirect {
+            var redirected = request
+            redirected.url = target
+            client?.urlProtocol(self, wasRedirectedTo: redirected, redirectResponse: response)
+            return
+        }
         client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
         client?.urlProtocol(self, didLoad: Data(reply.json.utf8))
         client?.urlProtocolDidFinishLoading(self)
@@ -53,7 +62,7 @@ private final class MockURLProtocol: URLProtocol {
 
 @MainActor
 private final class TestBed {
-    enum CallbackMode: Equatable { case good, wrongState, duplicateCode, cancelled }
+    enum CallbackMode: Equatable { case good, slowGood, wrongState, wrongScheme, duplicateState, duplicateCode, cancelled }
     var mode = CallbackMode.good
     var stored: Data?
     var challenge: String?
@@ -75,8 +84,10 @@ private final class TestBed {
                     throw TestFailure(description: "Missing state or PKCE challenge")
                 }
                 if self.mode == .cancelled { throw TestFailure(description: "User cancelled") }
-                var callback = URLComponents(string: scheme + ":/oauth2redirect")!
+                if self.mode == .slowGood { try await Task.sleep(nanoseconds: 200_000_000) }
+                var callback = URLComponents(string: (self.mode == .wrongScheme ? "other.scheme" : scheme) + ":/oauth2redirect")!
                 callback.queryItems = [.init(name: "state", value: self.mode == .wrongState ? "wrong" : state), .init(name: "code", value: "a+b/=")]
+                if self.mode == .duplicateState { callback.queryItems?.append(.init(name: "state", value: state)) }
                 if self.mode == .duplicateCode { callback.queryItems?.append(.init(name: "code", value: "second")) }
                 return callback.url!
             },
@@ -105,7 +116,7 @@ private func bodyItems(_ request: URLRequest) -> [URLQueryItem] {
 
 @MainActor
 private func testInvalidCallbacks() async throws {
-    for mode in [TestBed.CallbackMode.wrongState, .duplicateCode, .cancelled] {
+    for mode in [TestBed.CallbackMode.wrongState, .wrongScheme, .duplicateState, .duplicateCode, .cancelled] {
         let bed = TestBed(); bed.mode = mode
         MockURLProtocol.configure { _ in Reply(status: 500, json: "{}") }
         let account = bed.makeAccount()
@@ -192,6 +203,27 @@ private func testExpiredToken() async throws {
 }
 
 @MainActor
+private func testRefreshTokenSuccess() async throws {
+    let bed = TestBed()
+    MockURLProtocol.configure { request in
+        if request.url?.path == "/token" {
+            if bodyItems(request).first(where: { $0.name == "grant_type" })?.value == "refresh_token" {
+                return Reply(status: 200, json: #"{"access_token":"new-token","expires_in":3600}"#)
+            }
+            return Reply(status: 200, json: #"{"access_token":"expired","refresh_token":"refresh","expires_in":0}"#)
+        }
+        if request.url?.path == "/youtube/v3/channels" { return Reply(status: 200, json: ownResponse) }
+        return Reply(status: 200, json: "{\"items\":[{\"snippet\":{\"title\":\"A\",\"resourceId\":{\"channelId\":\"\(a)\"}}}]}")
+    }
+    let account = bed.makeAccount()
+    await account.signIn(); await account.sync()
+    try check(account.syncSucceeded && account.channels.count == 1, "Refresh token must restore an expired session")
+    let apiRequests = MockURLProtocol.requests().filter { $0.url?.path.hasPrefix("/youtube/v3/") == true }
+    try check(!apiRequests.isEmpty && apiRequests.allSatisfy { $0.value(forHTTPHeaderField: "Authorization") == "Bearer new-token" }, "Only the refreshed access token may be used for API requests")
+    try check(account.hasRefreshToken, "Refresh response without refresh_token must retain the existing token")
+}
+
+@MainActor
 private func testSignOutDuringRequest() async throws {
     let bed = TestBed()
     MockURLProtocol.configure { request in
@@ -206,6 +238,20 @@ private func testSignOutDuringRequest() async throws {
     account.signOut()
     await request.value
     try check(!account.signedIn && account.channels.isEmpty && account.connectedChannel == nil && bed.stored == nil, "A late response must not restore a signed-out account")
+    try check(!MockURLProtocol.requests().contains { $0.url?.path == "/youtube/v3/subscriptions" }, "Sign-out during the account request must not initiate another authenticated request")
+}
+
+@MainActor
+private func testSignOutDuringAuthorization() async throws {
+    let bed = TestBed(); bed.mode = .slowGood
+    MockURLProtocol.configure { _ in Reply(status: 200, json: tokenResponse) }
+    let account = bed.makeAccount()
+    let request = Task { await account.signIn() }
+    try await Task.sleep(nanoseconds: 60_000_000)
+    account.signOut()
+    await request.value
+    try check(!account.signedIn && bed.stored == nil, "A late authorization callback must not restore a signed-out account")
+    try check(MockURLProtocol.requests().isEmpty, "Sign-out during authentication must not exchange the authorization code")
 }
 
 @MainActor
@@ -218,6 +264,23 @@ private func testRedirectDelegate() throws {
     try check(redirected == nil, "The production redirect delegate must refuse the next request")
 }
 
+@MainActor
+private func testNoBearerTokenOnRedirect() async throws {
+    let bed = TestBed()
+    MockURLProtocol.configure { request in
+        if request.url?.path == "/token" { return Reply(status: 200, json: tokenResponse) }
+        if request.url?.path == "/youtube/v3/channels" {
+            return Reply(status: 302, json: "{}", redirect: URL(string: "https://evil.invalid/steal")!)
+        }
+        return Reply(status: 200, json: #"{"items":[]}"#)
+    }
+    let account = bed.makeAccount()
+    await account.signIn(); await account.sync()
+    let requests = MockURLProtocol.requests()
+    try check(requests.contains { $0.url?.path == "/youtube/v3/channels" }, "The simulated redirect must actually be exercised")
+    try check(!requests.contains { $0.url?.host == "evil.invalid" }, "Redirects must not transmit the bearer token to another host")
+}
+
 @main
 struct AccountIntegrationTestApp: App {
     var body: some Scene {
@@ -228,8 +291,11 @@ struct AccountIntegrationTestApp: App {
                     try await testPaginationAndUploads()
                     try await testPaginationCycle()
                     try await testExpiredToken()
+                    try await testRefreshTokenSuccess()
                     try await testSignOutDuringRequest()
+                    try await testSignOutDuringAuthorization()
                     try testRedirectDelegate()
+                    try await testNoBearerTokenOnRedirect()
                     print("FOCUS_ACCOUNT_TESTS_PASSED")
                     fflush(stdout)
                     exit(0)

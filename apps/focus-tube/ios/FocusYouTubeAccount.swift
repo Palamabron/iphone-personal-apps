@@ -193,6 +193,7 @@ final class FocusYouTubeAccount: NSObject, ObservableObject, ASWebAuthentication
             ]
             guard let authorizationURL = url.url else { throw Failure.invalidResponse }
             let callback = try await authenticate(url: authorizationURL, scheme: scheme)
+            guard requestGeneration == generation else { return }
             guard callback.scheme?.lowercased() == scheme.lowercased(), callback.host == nil, callback.path == "/oauth2redirect",
                   let components = URLComponents(url: callback, resolvingAgainstBaseURL: false) else { throw Failure.invalidResponse }
             let items = components.queryItems ?? []
@@ -224,6 +225,7 @@ final class FocusYouTubeAccount: NSObject, ObservableObject, ASWebAuthentication
         do {
             let token = try await accessToken()
             let own: OwnChannelResponse? = try? await api("channels", query: [.init(name: "part", value: "snippet"), .init(name: "mine", value: "true"), .init(name: "maxResults", value: "1")], token: token)
+            guard requestGeneration == generation else { return }
             var next: String? = nil
             var all: [Channel] = []
             var seen = Set<String>()
@@ -234,6 +236,7 @@ final class FocusYouTubeAccount: NSObject, ObservableObject, ASWebAuthentication
                 var query = [URLQueryItem(name: "part", value: "snippet"), .init(name: "mine", value: "true"), .init(name: "maxResults", value: "50")]
                 if let next { query.append(.init(name: "pageToken", value: next)) }
                 let page: SubscriptionResponse = try await api("subscriptions", query: query, token: token)
+                guard requestGeneration == generation else { return }
                 for item in page.items {
                     if let id = item.snippet.resourceId.channelId, Self.validChannelID(id), seen.insert(id).inserted {
                         all.append(Channel(id: id, title: String(item.snippet.title.prefix(200))))
@@ -264,6 +267,7 @@ final class FocusYouTubeAccount: NSObject, ObservableObject, ASWebAuthentication
             let ids = Array(unique.prefix(30))
             guard !ids.isEmpty else { throw Failure.invalidResponse }
             let response: ChannelsResponse = try await api("channels", query: [.init(name: "part", value: "contentDetails"), .init(name: "id", value: ids.joined(separator: ",")), .init(name: "maxResults", value: "50")], token: token)
+            guard requestGeneration == generation, currentUploadsGeneration == uploadsGeneration else { return }
             let playlistIDs = response.items.compactMap { $0.contentDetails.relatedPlaylists.uploads }
             var candidates: [Candidate] = []
             var failed = 0
@@ -279,6 +283,7 @@ final class FocusYouTubeAccount: NSObject, ObservableObject, ASWebAuthentication
                     for await value in group { values.append(value) }
                     return values
                 }
+                guard requestGeneration == generation, currentUploadsGeneration == uploadsGeneration else { return }
                 for result in results { if let result { candidates.append(contentsOf: result) } else { failed += 1 } }
             }
             candidates.sort { $0.publishedAt > $1.publishedAt }
@@ -287,6 +292,7 @@ final class FocusYouTubeAccount: NSObject, ObservableObject, ASWebAuthentication
             for start in stride(from: 0, to: first.count, by: 50) {
                 let batch = first[start..<min(start + 50, first.count)]
                 let details: VideosResponse = try await api("videos", query: [.init(name: "part", value: "contentDetails,snippet"), .init(name: "id", value: batch.map(\.id).joined(separator: ",")), .init(name: "maxResults", value: "50")], token: token)
+                guard requestGeneration == generation, currentUploadsGeneration == uploadsGeneration else { return }
                 for item in details.items where item.snippet.liveBroadcastContent == "none" {
                     durations[item.id] = Self.durationSeconds(item.contentDetails.duration)
                 }
