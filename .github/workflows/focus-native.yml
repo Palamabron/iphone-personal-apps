@@ -1,6 +1,11 @@
 name: Build Focus Tube Native
 on:
   workflow_dispatch:
+    inputs:
+      google_client_id:
+        description: Optional iOS OAuth client ID for subscription sync
+        type: string
+        required: false
 permissions:
   contents: read
 jobs:
@@ -23,6 +28,8 @@ jobs:
           /tmp/focus-policy-tests
       - name: Build standalone unsigned iPhone app
         run: node scripts/build-native-ios.mjs
+        env:
+          FOCUS_GOOGLE_IOS_CLIENT_ID: ${{ inputs.google_client_id }}
       - name: Validate iPhone package
         run: python3 ../../scripts/validate-ipa.py build/ios/FocusTubeNative-unsigned.ipa
       - name: Build and launch simulator app

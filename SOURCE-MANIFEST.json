@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-03T21:36:32.305Z",
+  "generatedAt": "2026-11-03T21:38:57.905Z",
   "textLineEndings": "LF",
   "files": [
     {
@@ -9,8 +9,8 @@
     },
     {
       "path": ".github/workflows/focus-native.yml",
-      "bytes": 2255,
-      "sha256": "2b3863f2dcde1f20a91331e1d65c452ae64c49fa99a76882f5ff021f5d3ce5c7"
+      "bytes": 2490,
+      "sha256": "7cb76f15caed419bbbca29164f049c511384457175c4e1903ce2ed924e86a27b"
     },
     {
       "path": ".github/workflows/iphone.yml",
@@ -49,8 +49,8 @@
     },
     {
       "path": "apps/focus-tube/ios/FocusApp.swift",
-      "bytes": 25627,
-      "sha256": "6f512643140a075ee51b6ad317f443879e84a832f156eb99005867dfae143762"
+      "bytes": 25947,
+      "sha256": "d3d4001de32b90426496b03d8598319017f6ab22e6c86ee711c16b0324ca0cec"
     },
     {
       "path": "apps/focus-tube/ios/FocusDiscovery.swift",

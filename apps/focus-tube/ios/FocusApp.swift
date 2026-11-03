@@ -201,11 +201,19 @@ struct FocusScreen: View {
                 while !Task.isCancelled {
                     try? await Task.sleep(nanoseconds: 1_800_000_000_000)
                     guard !Task.isCancelled else { break }
-                    if scenePhase == .active { await discovery.refreshIfNeeded() }
+                    if scenePhase == .active {
+                        await discovery.refreshIfNeeded()
+                        if account.signedIn { await account.sync(); await loadSelectedUploads() }
+                    }
                 }
             }
             .onChange(of: scenePhase) { _, phase in
-                if phase == .active { Task { await discovery.refreshIfNeeded() } }
+                if phase == .active {
+                    Task {
+                        await discovery.refreshIfNeeded()
+                        if account.signedIn { await account.sync(); await loadSelectedUploads() }
+                    }
+                }
             }
             .sheet(isPresented: $showInfo) {
                 NavigationStack { ScrollView { VStack(alignment: .leading, spacing: 18) {
