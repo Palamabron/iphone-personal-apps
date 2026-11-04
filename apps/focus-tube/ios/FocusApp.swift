@@ -10,7 +10,6 @@ private enum FocusTheme {
     static let background = Color(uiColor: uiBackground)
     static let accent = Color(uiColor: adaptive(light: UIColor(red: 0.161, green: 0.349, blue: 0.278, alpha: 1), dark: UIColor(red: 0.81, green: 0.92, blue: 0.65, alpha: 1)))
     static let surface = Color(uiColor: adaptive(light: .white, dark: UIColor(red: 0.095, green: 0.125, blue: 0.113, alpha: 1)))
-    static let elevated = Color(uiColor: adaptive(light: UIColor(white: 0.94, alpha: 1), dark: UIColor(red: 0.13, green: 0.16, blue: 0.145, alpha: 1)))
     static let border = Color.primary.opacity(0.09)
     static let corner: CGFloat = 18
 }
@@ -228,6 +227,7 @@ struct FocusScreen: View {
                     Text("Search YouTube without Shorts or an endless feed. Results load 15 at a time.")
                     Text("YouTube handles playback and sign-in. Google may block sign-in here. Premium, picture in picture and background playback need testing on your device. Offline playback is unavailable.")
                     Text("HackerTube picks are separate from Google subscription sync. Saved videos stay on this device. This app does not block the official YouTube app.").foregroundStyle(.secondary)
+                    Text("Recommendations matching selected subscription channel names appear first. Different channels can have the same name.").foregroundStyle(.secondary)
                     Text("Page check").font(.headline)
                     Text("Run this while a YouTube page is open. It shows filter state and element counts; it does not show account details or page text.").font(.footnote).foregroundStyle(.secondary)
                     Button("Check current page") { browser.inspectPage() }.buttonStyle(.bordered)
@@ -251,19 +251,17 @@ struct FocusScreen: View {
 
     private var startScreen: some View {
         ScrollView {
-            LazyVStack(alignment: .leading, spacing: 28) {
+            LazyVStack(alignment: .leading, spacing: 18) {
                 VStack(alignment: .leading, spacing: 6) {
                     Text("Discover").font(.title2.weight(.bold))
-                    Text("Search, subscriptions, and selected videos.").font(.subheadline).foregroundStyle(.secondary)
                 }.padding(.top, 8)
 
                 HStack(spacing: 10) {
                     Image(systemName: "magnifyingglass").foregroundStyle(.secondary).accessibilityHidden(true)
                     TextField("Search or paste a video link", text: $input)
                         .textInputAutocapitalization(.never).autocorrectionDisabled().submitLabel(.search).focused($typing).onSubmit(search).accessibilityLabel("Search YouTube or paste a video link")
-                    Button(action: search) { Image(systemName: "arrow.up").fontWeight(.semibold).frame(width: 44, height: 44) }
-                        .buttonStyle(.borderedProminent).tint(FocusTheme.accent)
-                        .accessibilityLabel("Search YouTube")
+                    Button("Search", action: search)
+                        .buttonStyle(.borderedProminent).controlSize(.large).tint(FocusTheme.accent)
                         .disabled(input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
                 .padding(.leading, 16).padding(.trailing, 6).padding(.vertical, 6)
@@ -275,18 +273,11 @@ struct FocusScreen: View {
                 }
 
                 VStack(alignment: .leading, spacing: 12) {
-                    HStack(alignment: .top, spacing: 12) {
-                        Image(systemName: "person.2.fill")
-                            .font(.subheadline.weight(.semibold)).foregroundStyle(FocusTheme.accent)
-                            .frame(width: 38, height: 38).background(FocusTheme.elevated, in: RoundedRectangle(cornerRadius: 11)).accessibilityHidden(true)
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Your channels").font(.headline)
-                            Text("Recent uploads from the channels you choose.").font(.subheadline).foregroundStyle(.secondary)
-                        }
-                    }
+                    Text("Your channels").font(.headline)
                     if !account.configured {
                         Text("Subscription sync is not configured on this build.").font(.caption).foregroundStyle(.secondary)
                     } else if !account.signedIn {
+                        Text("Connect Google to see recent uploads from your channels.").font(.subheadline).foregroundStyle(.secondary)
                         Button("Connect with Google") { Task { await account.signIn(); if account.signInSucceeded { await account.sync() } } }.buttonStyle(.bordered)
                     } else {
                         if let channel = account.connectedChannel { Text("Connected channel: \(channel)").font(.caption).foregroundStyle(.secondary) }
@@ -321,13 +312,11 @@ struct FocusScreen: View {
                                 .accessibilityLabel("Refresh recommendations")
                         }
                     }
-                    Text("HackerTube recommendations. Matching channel names from your selection appear first.")
-                        .font(.subheadline).foregroundStyle(.secondary)
                     if let date = discovery.lastUpdated {
-                        Text("Updated \(date.formatted(date: .abbreviated, time: .shortened)) · \(visibleVideos.count) videos")
+                        Text("HackerTube · Updated \(date.formatted(date: .abbreviated, time: .shortened)) · \(visibleVideos.count) videos")
                             .font(.caption).foregroundStyle(.secondary)
                     } else {
-                        Text("Offline selection · \(visibleVideos.count) videos").font(.caption).foregroundStyle(.secondary)
+                        Text("HackerTube · Offline selection · \(visibleVideos.count) videos").font(.caption).foregroundStyle(.secondary)
                     }
                     if let notice = discovery.notice { Text(notice).font(.caption).foregroundStyle(.secondary) }
                     ScrollView(.horizontal, showsIndicators: false) {
@@ -405,14 +394,14 @@ struct FocusScreen: View {
         Button { browser.open(URL(string: "https://m.youtube.com/feed/subscriptions")!) } label: {
             Label("Subscriptions", systemImage: "rectangle.stack")
                 .frame(maxWidth: .infinity, minHeight: 44)
-        }.buttonStyle(.bordered).font(.subheadline.weight(.medium))
+        }.buttonStyle(.bordered).tint(.primary).font(.subheadline.weight(.medium))
     }
 
     private var accountLink: some View {
         Button { browser.open(URL(string: "https://m.youtube.com/channel_switcher")!) } label: {
             Label("Account", systemImage: "person.crop.circle")
                 .frame(maxWidth: .infinity, minHeight: 44)
-        }.buttonStyle(.bordered).font(.subheadline.weight(.medium))
+        }.buttonStyle(.bordered).tint(.primary).font(.subheadline.weight(.medium))
     }
 
     private func recommendationRow(_ video: FocusRecommendation) -> some View {
