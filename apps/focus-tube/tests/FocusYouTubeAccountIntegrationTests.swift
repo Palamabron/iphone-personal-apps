@@ -350,14 +350,45 @@ private func testSafeAccountDiagnostics() async throws {
     await invalid.signIn()
     try check(diagnostics.entries.last?.event == .signInFailed && diagnostics.entries.last?.code == .invalidResponse, "Invalid callbacks must be reported only as a fixed error category")
 
-    let authBed = TestBed()
-    MockURLProtocol.configure { _ in Reply(status: 401, json: "{}") }
-    let unauthorized = authBed.makeAccount()
-    await unauthorized.signIn()
-    try check(diagnostics.entries.last?.event == .signInFailed && diagnostics.entries.last?.code == .authorization, "Authorization failures must have their fixed category")
+    let privateMarker = "PRIVATE_ERROR_MARKER"
+    let cases: [(Int, FocusDiagnosticCode)] = [
+        (400, .http400), (401, .http401), (403, .http403), (429, .http429), (500, .http5xx), (599, .http5xx)
+    ]
+    for (status, expected) in cases {
+        let authBed = TestBed()
+        MockURLProtocol.configure { _ in Reply(status: status, json: privateMarker) }
+        let unauthorized = authBed.makeAccount()
+        await unauthorized.signIn()
+        try check(diagnostics.entries.last?.event == .signInFailed && diagnostics.entries.last?.code == expected, "Token endpoint HTTP statuses must map to fixed safe categories")
+
+        let apiBed = TestBed()
+        MockURLProtocol.configure { request in
+            if request.url?.path == "/token" { return Reply(status: 200, json: tokenResponse) }
+            if request.url?.path == "/youtube/v3/channels" { return Reply(status: 200, json: ownResponse) }
+            return Reply(status: status, json: privateMarker)
+        }
+        let apiAccount = apiBed.makeAccount()
+        await apiAccount.signIn()
+        await apiAccount.sync()
+        try check(diagnostics.entries.last?.event == .subscriptionSyncFailed && diagnostics.entries.last?.code == expected, "YouTube API HTTP statuses must map to fixed safe categories")
+    }
+    let fallbackBed = TestBed()
+    MockURLProtocol.configure { _ in Reply(status: 404, json: privateMarker) }
+    let fallback = fallbackBed.makeAccount()
+    await fallback.signIn()
+    try check(diagnostics.entries.last?.event == .signInFailed && diagnostics.entries.last?.code == .authorization, "Unlisted token status codes must use the generic authorization category")
+
+    let searchBed = TestBed()
+    MockURLProtocol.configure { request in
+        if request.url?.path == "/token" { return Reply(status: 200, json: tokenResponse) }
+        return Reply(status: 429, json: privateMarker)
+    }
+    let limitedSearch = searchBed.makeAccount()
+    await limitedSearch.signIn()
+    await limitedSearch.refreshFreshVideosIfNeeded()
+    try check(diagnostics.entries.last?.event == .freshSearchFailed && diagnostics.entries.last?.code == .http429, "Concurrent discovery failures must retain only the fixed HTTP category")
 
     let networkBed = TestBed()
-    let privateMarker = "PRIVATE_ERROR_MARKER"
     let offline = NSError(domain: NSURLErrorDomain, code: NSURLErrorNotConnectedToInternet, userInfo: [NSLocalizedDescriptionKey: privateMarker])
     MockURLProtocol.configure { _ in Reply(status: 0, json: "", error: offline) }
     let disconnected = networkBed.makeAccount()

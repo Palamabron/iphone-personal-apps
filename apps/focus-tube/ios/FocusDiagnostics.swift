@@ -17,6 +17,7 @@ enum FocusDiagnosticEvent: String, Codable, CaseIterable, Sendable {
 // Codes are deliberately broad and contain no raw NSError data or HTTP body.
 enum FocusDiagnosticCode: String, Codable, Sendable {
     case timeout, offline, network, authorization, invalidResponse, notSignedIn, api, security, keychain, other
+    case http400, http401, http403, http429, http5xx
 }
 
 struct FocusDiagnosticEntry: Codable, Equatable {

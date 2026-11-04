@@ -673,7 +673,8 @@ final class FocusYouTubeAccount: NSObject, ObservableObject, ASWebAuthentication
         testHooks?.observeTokenRequest(request)
         #endif
         let (data, response) = try await network.data(for: request)
-        guard let response = response as? HTTPURLResponse, (200..<300).contains(response.statusCode), data.count < 100_000 else { throw Failure.authorization }
+        guard let response = response as? HTTPURLResponse, data.count < 100_000 else { throw Failure.authorization }
+        guard (200..<300).contains(response.statusCode) else { throw Self.httpFailure(response.statusCode, fallback: .authorization) }
         return try JSONDecoder().decode(TokenResponse.self, from: data)
     }
     private func api<T: Decodable>(_ path: String, query: [URLQueryItem], token: String) async throws -> T {
@@ -688,7 +689,8 @@ final class FocusYouTubeAccount: NSObject, ObservableObject, ASWebAuthentication
         if let timeout { request.timeoutInterval = timeout }
         request.setValue("Bearer " + token, forHTTPHeaderField: "Authorization")
         let (data, response) = try await network.data(for: request)
-        guard let response = response as? HTTPURLResponse, (200..<300).contains(response.statusCode), data.count < 2_000_000 else { throw Failure.api }
+        guard let response = response as? HTTPURLResponse, data.count < 2_000_000 else { throw Failure.api }
+        guard (200..<300).contains(response.statusCode) else { throw Self.httpFailure(response.statusCode, fallback: .api) }
         return try JSONDecoder().decode(T.self, from: data)
     }
     nonisolated private static func playlistCandidates(_ playlist: String, token: String, network: URLSession) async -> [Candidate]? {
@@ -746,6 +748,7 @@ final class FocusYouTubeAccount: NSObject, ObservableObject, ASWebAuthentication
     }
     private enum Failure: LocalizedError {
         case invalidResponse, authorization, notSignedIn, api, security
+        case http400, http401, http403, http429, http5xx
         var errorDescription: String? {
             switch self {
             case .invalidResponse: return "The authorization response was invalid."
@@ -753,7 +756,25 @@ final class FocusYouTubeAccount: NSObject, ObservableObject, ASWebAuthentication
             case .notSignedIn: return "Sign in to your YouTube account first."
             case .api: return "YouTube could not load the requested data. Check access and try again."
             case .security: return "Could not store credentials securely on this device."
+            case .http400: return "Google rejected the request. Check the app configuration or reconnect your account."
+            case .http401: return "Google could not verify this session. Try signing in again."
+            case .http403: return "Google denied access. Check account permissions and the API quota."
+            case .http429: return "Google is limiting requests. Try again later."
+            case .http5xx: return "Google's service is temporarily unavailable. Try again later."
             }
+        }
+    }
+
+    // Only fixed status classes cross the network/diagnostics boundary. The
+    // response body, request URL, headers, and any raw error remain private.
+    nonisolated private static func httpFailure(_ status: Int, fallback: Failure) -> Failure {
+        switch status {
+        case 400: return .http400
+        case 401: return .http401
+        case 403: return .http403
+        case 429: return .http429
+        case 500...599: return .http5xx
+        default: return fallback
         }
     }
 
@@ -767,6 +788,11 @@ final class FocusYouTubeAccount: NSObject, ObservableObject, ASWebAuthentication
             case .notSignedIn: return .notSignedIn
             case .api: return .api
             case .security: return .security
+            case .http400: return .http400
+            case .http401: return .http401
+            case .http403: return .http403
+            case .http429: return .http429
+            case .http5xx: return .http5xx
             }
         }
         let issue = error as NSError
