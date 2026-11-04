@@ -280,7 +280,11 @@ private func testFreshYouTubeDiscovery() async throws {
         return Reply(status: 500, json: "{}")
     }
     let pending = Task { await signingOut.refreshFreshVideosIfNeeded() }
-    try await Task.sleep(nanoseconds: 60_000_000)
+    for _ in 0..<80 {
+        if MockURLProtocol.requests().contains(where: { $0.url?.path == "/youtube/v3/search" }) { break }
+        try await Task.sleep(nanoseconds: 25_000_000)
+    }
+    try check(MockURLProtocol.requests().contains { $0.url?.path == "/youtube/v3/search" }, "A search must actually begin before testing cancellation")
     signingOut.signOut()
     await pending.value
     try check(signingOut.freshVideos.isEmpty, "A response received after sign-out must not publish discovery results")
@@ -288,13 +292,27 @@ private func testFreshYouTubeDiscovery() async throws {
     try check((1...4).contains(pendingSearches), "Concurrent public searches must stay within their fixed bound")
     try check(!MockURLProtocol.requests().contains { $0.url?.path == "/youtube/v3/videos" }, "Sign-out must stop authenticated metadata requests")
     try check(signingOutBed.freshCache.data(forKey: "focus.youtube.discovery.v1") == nil && signingOutBed.freshCache.object(forKey: "focus.youtube.discovery.attempt.v1") == nil, "Sign-out must remove cached results and an interrupted retry delay")
-    configure()
+    // An already-cancelled URLProtocol may still finish on another thread.
+    // Give the next sign-in a distinct fake token so requests from the old
+    // generation cannot be mistaken for the new authenticated search.
+    let reconnectedToken = "test-access-after-reconnect"
+    MockURLProtocol.configure { request in
+        switch request.url?.path {
+        case "/token": return Reply(status: 200, json: "{\"access_token\":\"\(reconnectedToken)\",\"refresh_token\":\"refresh-2\",\"expires_in\":3600}")
+        case "/youtube/v3/search": return Reply(status: 200, json: "{\"items\":[\(searchItems)]}")
+        case "/youtube/v3/videos": return Reply(status: 200, json: "{\"items\":[\(details)]}")
+        default: return Reply(status: 500, json: "{}")
+        }
+    }
     await signingOut.signIn()
+    try check(signingOut.signedIn && signingOut.signInSucceeded && !signingOut.busy, "The simulated reconnect must succeed before retrying discovery")
     await signingOut.refreshFreshVideosIfNeeded()
-    try check(!MockURLProtocol.requests().contains { $0.url?.path == "/youtube/v3/search" } && signingOut.freshNotice?.contains("wait") == true, "A fresh sign-in must respect the shared cooldown after cancellation")
+    try check(!MockURLProtocol.requests().contains { $0.url?.path == "/youtube/v3/search" && $0.value(forHTTPHeaderField: "Authorization") == "Bearer " + reconnectedToken } && signingOut.freshNotice?.contains("wait") == true, "A fresh sign-in must respect the shared cooldown after cancellation")
     signingOutBed.now.addTimeInterval(5 * 60 + 1)
     await signingOut.refreshFreshVideosIfNeeded()
-    try check(MockURLProtocol.requests().filter { $0.url?.path == "/youtube/v3/search" }.count == 4, "Cancelled attempts must be retriable after the shared cooldown rather than six hours")
+    let reconnectedRequests = MockURLProtocol.requests().filter { $0.url?.path == "/youtube/v3/search" && $0.value(forHTTPHeaderField: "Authorization") == "Bearer " + reconnectedToken }
+    try check(reconnectedRequests.count == 4, "Cancelled attempts must be retriable after the shared cooldown rather than six hours (new search count: \(reconnectedRequests.count), signed in: \(signingOut.signedIn), busy: \(signingOut.busy), loading: \(signingOut.freshLoading))")
+    try check(!MockURLProtocol.requests().contains { $0.url?.path == "/youtube/v3/videos" && $0.value(forHTTPHeaderField: "Authorization") == "Bearer access-1" }, "The signed-out generation must not request video metadata after reconnect")
 
     let reconnectBed = TestBed()
     let reconnecting = reconnectBed.makeAccount()
