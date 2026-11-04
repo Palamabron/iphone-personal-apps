@@ -32,6 +32,15 @@ DEVICE=$(xcrun simctl list devices available -j | python3 -c 'import json,sys; d
 xcrun simctl boot "$DEVICE" || true
 xcrun simctl bootstatus "$DEVICE" -b
 xcrun simctl install "$DEVICE" build/account-test/Build/Products/Debug-iphonesimulator/FocusTubeNative.app
-perl -e 'alarm shift; exec @ARGV' 240 xcrun simctl launch --console --terminate-running-process "$DEVICE" dev.palamabron.focustube.accounttests > /tmp/focus-account-test-output.log 2>&1 || true
+launch_status=0
+perl -e 'alarm shift; exec @ARGV' 240 xcrun simctl launch --console --terminate-running-process "$DEVICE" dev.palamabron.focustube.accounttests > /tmp/focus-account-test-output.log 2>&1 || launch_status=$?
 cat /tmp/focus-account-test-output.log
-grep -q 'FOCUS_ACCOUNT_TESTS_PASSED' /tmp/focus-account-test-output.log
+printf 'Account test simulator process exit status: %s\n' "$launch_status"
+if [ "$launch_status" -ne 0 ]; then
+  echo 'Account test process failed or timed out.' >&2
+  exit "$launch_status"
+fi
+if ! grep -q 'FOCUS_ACCOUNT_TESTS_PASSED' /tmp/focus-account-test-output.log; then
+  echo 'Account test process exited without the success marker.' >&2
+  exit 1
+fi
