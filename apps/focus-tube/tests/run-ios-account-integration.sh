@@ -20,7 +20,7 @@ cp -R "$WORK/Assets.xcassets" "$TEST_WORK/Assets.xcassets"
 cp "$WORK/filter.js" "$TEST_WORK/filter.js"
 if [ -f "$WORK/GoogleConfig.plist" ]; then cp "$WORK/GoogleConfig.plist" "$TEST_WORK/GoogleConfig.plist"; fi
 PROJECT="$TEST_WORK/FocusTubeNative.xcodeproj"
-cat ios/FocusPolicy.swift ios/FocusOAuthForm.swift ios/FocusRecommendations.swift ios/FocusYouTubeAccount.swift tests/FocusYouTubeAccountIntegrationTests.swift > "$TEST_WORK/FocusApp.swift"
+cat ios/FocusPolicy.swift ios/FocusOAuthForm.swift ios/FocusRecommendations.swift ios/FocusDiagnostics.swift ios/FocusYouTubeAccount.swift tests/FocusYouTubeAccountIntegrationTests.swift > "$TEST_WORK/FocusApp.swift"
 
 xcodebuild -project "$PROJECT" -scheme FocusTubeNative -configuration Debug -sdk iphonesimulator \
   -destination 'generic/platform=iOS Simulator' -derivedDataPath build/account-test \

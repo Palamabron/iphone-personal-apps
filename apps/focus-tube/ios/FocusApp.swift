@@ -2,6 +2,17 @@ import SwiftUI
 import WebKit
 import UIKit
 import SafariServices
+import CoreTransferable
+import UniformTypeIdentifiers
+
+private struct FocusDiagnosticTextFile: Transferable {
+    let report: String
+    static var transferRepresentation: some TransferRepresentation {
+        DataRepresentation(exportedContentType: .utf8PlainText) { item in
+            Data(item.report.utf8)
+        }.suggestedFileName("FocusTube-diagnostics.txt")
+    }
+}
 
 private enum FocusTheme {
     private static func adaptive(light: UIColor, dark: UIColor) -> UIColor {
@@ -53,6 +64,7 @@ final class FocusBrowser: NSObject, ObservableObject, WKNavigationDelegate, WKUI
         }
         webView = WKWebView(frame: .zero, configuration: configuration)
         super.init()
+        FocusDiagnostics.shared.record(.appStarted)
         webView.navigationDelegate = self
         webView.uiDelegate = self
         webView.allowsBackForwardNavigationGestures = true
@@ -68,7 +80,7 @@ final class FocusBrowser: NSObject, ObservableObject, WKNavigationDelegate, WKUI
     }
 
     func open(_ url: URL) {
-        guard FocusPolicy.allowed(url) else { message = "This link is blocked. Paste a regular YouTube video link."; return }
+        guard FocusPolicy.allowed(url) else { FocusDiagnostics.shared.record(.navigationBlocked); message = "This link is blocked. Paste a regular YouTube video link."; return }
         home = false; message = nil; ready = false; loading = true
         webView.load(URLRequest(url: url))
     }
@@ -113,6 +125,7 @@ final class FocusBrowser: NSObject, ObservableObject, WKNavigationDelegate, WKUI
         guard navigationAction.targetFrame?.isMainFrame != false else { decisionHandler(.allow); return }
         guard let url = navigationAction.request.url, FocusPolicy.allowed(url) else {
             decisionHandler(.cancel)
+            FocusDiagnostics.shared.record(.navigationBlocked)
             // A blocked redirect may arrive after open() set the loading state.
             // No failure callback is guaranteed for a navigation we cancel here.
             loading = false
@@ -125,22 +138,31 @@ final class FocusBrowser: NSObject, ObservableObject, WKNavigationDelegate, WKUI
         loading = true; ready = false
     }
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+        FocusDiagnostics.shared.record(.pageLoaded)
         loading = false; title = webView.title ?? "Focus Tube"
         guard let url = webView.url, FocusPolicy.isYouTube(url) else { ready = true; return }
         webView.evaluateJavaScript("document.documentElement.hasAttribute('data-ft-active')") { [weak self] result, _ in
             guard let self else { return }
             guard self.webView.url == url else { return }
             self.ready = result as? Bool == true
+            FocusDiagnostics.shared.record(self.ready ? .filterReady : .filterUnavailable)
             if !self.ready { self.message = "The filter did not start. Tap refresh to try again." }
         }
     }
     func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) { failed(error) }
     func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) { failed(error) }
     private func failed(_ error: Error) {
-        if (error as NSError).code == NSURLErrorCancelled { return }
+        let nsError = error as NSError
+        if nsError.domain == NSURLErrorDomain && nsError.code == NSURLErrorCancelled { return }
+        let safeCode: FocusDiagnosticCode
+        if nsError.domain != NSURLErrorDomain { safeCode = .other }
+        else if nsError.code == NSURLErrorTimedOut { safeCode = .timeout }
+        else if nsError.code == NSURLErrorNotConnectedToInternet { safeCode = .offline }
+        else { safeCode = .network }
+        FocusDiagnostics.shared.record(.pageLoadFailed, code: safeCode)
         loading = false; ready = false; message = "Could not load the page. Check your connection and try again."
     }
-    func webViewWebContentProcessDidTerminate(_ webView: WKWebView) { loading = false; ready = false; message = "The player stopped. Tap refresh to try again." }
+    func webViewWebContentProcessDidTerminate(_ webView: WKWebView) { FocusDiagnostics.shared.record(.webContentTerminated); loading = false; ready = false; message = "The player stopped. Tap refresh to try again." }
     func webView(_ webView: WKWebView, createWebViewWith configuration: WKWebViewConfiguration, for navigationAction: WKNavigationAction, windowFeatures: WKWindowFeatures) -> WKWebView? {
         if navigationAction.targetFrame == nil, let url = navigationAction.request.url { open(url) }
         return nil
@@ -185,9 +207,15 @@ struct FocusScreen: View {
     @State private var recommendationOrder = FocusRecommendations.Order.recommended
     @State private var uploadOrder = FocusRecommendations.Order.newest
     @State private var recommendationLimit = 15
+    @State private var showRecommendationSettings = false
+    @State private var confirmRecommendationReset = false
+    @State private var previousRecommendationPreferences: FocusRankingPreferences?
+    @State private var recommendationFeedback: String?
     @StateObject private var discovery = FocusDiscovery()
     @StateObject private var account = FocusYouTubeAccount()
+    @StateObject private var diagnosticLog = FocusDiagnostics.shared
     @AppStorage("focus.subscriptionSelection.v1") private var selectedChannelIDs = ""
+    @AppStorage("focus.recommendationPreferences.v1") private var recommendationPreferencesJSON = ""
     @State private var showChannels = false
     @Environment(\.scenePhase) private var scenePhase
     @FocusState private var typing: Bool
@@ -228,12 +256,14 @@ struct FocusScreen: View {
             .task {
                 if await account.syncIfNeeded() { await loadSelectedUploads() }
                 await discovery.refreshIfNeeded()
+                await account.refreshFreshVideosIfNeeded()
                 while !Task.isCancelled {
                     try? await Task.sleep(nanoseconds: 300_000_000_000)
                     guard !Task.isCancelled else { break }
                     if scenePhase == .active {
                         await discovery.refreshIfNeeded()
                         if await account.syncIfNeeded() { await loadSelectedUploads() }
+                        await account.refreshFreshVideosIfNeeded()
                     }
                 }
             }
@@ -242,6 +272,7 @@ struct FocusScreen: View {
                     Task {
                         await discovery.refreshIfNeeded()
                         if await account.syncIfNeeded() { await loadSelectedUploads() }
+                        await account.refreshFreshVideosIfNeeded()
                     }
                 }
             }
@@ -252,18 +283,31 @@ struct FocusScreen: View {
                     Text("YouTube handles playback and sign-in. Google may block sign-in here. Premium, picture in picture and background playback need testing on your device. Offline playback is unavailable.")
                     Text("Premium playback test").font(.headline)
                     Text("Opens one public video in a system browser view. Sign in to your Premium account there if needed and check your account status. Shorts and feed filtering do not work in this view. The system view may use a separate sign-in from Focus Tube.").font(.footnote)
-                    Button("Open test video") { showPremiumTest = true }.buttonStyle(.bordered)
+                    Button("Open test video") { FocusDiagnostics.shared.record(.premiumTestOpened); showPremiumTest = true }.buttonStyle(.bordered)
                     Text("HackerTube picks are separate from Google subscription sync. Saved videos stay on this device. This app does not block the official YouTube app.").foregroundStyle(.secondary)
-                    Text("Recommendations matching selected subscription channel names appear first. Different channels can have the same name.").foregroundStyle(.secondary)
+                    Text("Selected subscription names and your feedback can influence Recommended order on this device. Different channels can share a name.").foregroundStyle(.secondary)
                     Text("Page check").font(.headline)
                     Text("Run this while a YouTube page is open. It shows filter state and element counts; it does not show account details or page text.").font(.footnote).foregroundStyle(.secondary)
                     Button("Check current page") { browser.inspectPage() }.buttonStyle(.bordered)
                     Text(browser.diagnostics).font(.system(.footnote, design: .monospaced)).textSelection(.enabled)
-                    Text("Focus Tube 0.5.0 development").font(.footnote)
+                    DisclosureGroup("Diagnostics") {
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("Up to 100 recent technical events are stored on this device. The report contains times, fixed event categories, counts, app and OS versions. It excludes account details, page content, links and video information. Nothing is sent automatically.")
+                                .font(.footnote).foregroundStyle(.secondary)
+                            Text(diagnosticLog.report()).font(.system(.caption, design: .monospaced)).textSelection(.enabled)
+                            ShareLink(item: FocusDiagnosticTextFile(report: diagnosticLog.report()), preview: SharePreview("Focus Tube diagnostics")) {
+                                Label("Share diagnostics (.txt)", systemImage: "square.and.arrow.up")
+                            }.buttonStyle(.bordered)
+                            Button("Clear diagnostics", role: .destructive) { diagnosticLog.clear() }
+                                .disabled(diagnosticLog.entries.isEmpty)
+                        }.padding(.vertical, 8)
+                    }
+                    Text("Focus Tube \(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "unknown") test").font(.footnote)
                 }.padding(24) }.navigationTitle("About").toolbar { Button("Done") { showInfo = false } } }
                     .sheet(isPresented: $showPremiumTest) { PremiumTestView(isPresented: $showPremiumTest).ignoresSafeArea() }
             }
             .sheet(isPresented: $showChannels) { subscriptionPicker }
+            .sheet(isPresented: $showRecommendationSettings) { recommendationSettings }
         }
     }
     private var topics: [String] {
@@ -271,10 +315,12 @@ struct FocusScreen: View {
     }
 
     private var visibleVideos: [FocusRecommendation] {
-        let items = discovery.videos.isEmpty ? FocusRecommendations.videos : discovery.videos
+        let picks = discovery.videos.isEmpty ? FocusRecommendations.videos : discovery.videos
+        var seen = Set<String>()
+        let items = (picks + account.freshVideos).filter { seen.insert($0.id).inserted }
         let filtered = selectedTopic == "All" ? items : items.filter { $0.topic == selectedTopic }
         let names = account.channels.filter { selectedIDs.contains($0.id) }.map(\.title)
-        let preferred = FocusRecommendations.prioritize(filtered, selectedChannelNames: names)
+        let preferred = FocusRecommendations.prioritize(filtered, selectedChannelNames: names, preferences: recommendationPreferences)
         return FocusRecommendations.sortByPublication(preferred, order: recommendationOrder, date: { $0.publishedAt })
     }
 
@@ -307,7 +353,7 @@ struct FocusScreen: View {
                         Text("Subscription sync is not configured on this build.").font(.caption).foregroundStyle(.secondary)
                     } else if !account.signedIn {
                         Text("Connect Google to see recent uploads from your channels.").font(.subheadline).foregroundStyle(.secondary)
-                        Button("Connect with Google") { Task { await account.signIn(); if account.signInSucceeded { await account.sync() } } }.buttonStyle(.bordered)
+                        Button("Connect with Google") { Task { await account.signIn(); if account.signInSucceeded { await account.sync(); await account.refreshFreshVideosIfNeeded() } } }.buttonStyle(.bordered)
                     } else {
                         if let channel = account.connectedChannel { Text("Connected channel: \(channel)").font(.caption).foregroundStyle(.secondary) }
                         if !account.hasRefreshToken { Text("Google did not provide a refresh token. You may need to reconnect when this session expires.").font(.caption).foregroundStyle(.secondary) }
@@ -330,7 +376,7 @@ struct FocusScreen: View {
                             }.buttonStyle(.plain)
                         }
                         Button("Disconnect subscriptions", role: .destructive) { account.signOut(); selectedChannelIDs = "" }.font(.footnote)
-                        Button("Reconnect Google account") { Task { await account.signIn(); if account.signInSucceeded { await account.sync(); if account.syncSucceeded { await loadSelectedUploads() } } } }.font(.footnote).disabled(account.busy)
+                        Button("Reconnect Google account") { Task { await account.signIn(); if account.signInSucceeded { await account.sync(); if account.syncSucceeded { await loadSelectedUploads() }; await account.refreshFreshVideosIfNeeded() } } }.font(.footnote).disabled(account.busy)
                     }
                     if let notice = account.notice { Text(notice).font(.caption).foregroundStyle(.secondary) }
                     Text("Playback uses a separate YouTube sign-in.").font(.caption).foregroundStyle(.secondary)
@@ -345,21 +391,41 @@ struct FocusScreen: View {
                         Spacer()
                         if discovery.loading { ProgressView().controlSize(.small) }
                         else {
-                            Button { Task { await discovery.refresh() } } label: { Image(systemName: "arrow.clockwise").frame(width: 44, height: 44) }
+                            Button {
+                                Task { await discovery.refresh() }
+                                Task { await account.refreshFreshVideos(force: true) }
+                            } label: { Image(systemName: "arrow.clockwise").frame(width: 44, height: 44) }
                                 .accessibilityLabel("Refresh recommendations")
                         }
+                        Button { showRecommendationSettings = true } label: { Image(systemName: "slider.horizontal.3").frame(width: 44, height: 44) }
+                            .accessibilityLabel("Recommendation preferences")
                     }
                     if let date = discovery.lastUpdated {
-                        Text("HackerTube · Updated \(date.formatted(date: .abbreviated, time: .shortened)) · \(visibleVideos.count) videos")
+                        Text("HackerTube updated \(date.formatted(date: .abbreviated, time: .shortened))")
                             .font(.caption).foregroundStyle(.secondary)
                     } else {
-                        Text("HackerTube · Offline selection · \(visibleVideos.count) videos").font(.caption).foregroundStyle(.secondary)
+                        Text("HackerTube offline selection").font(.caption).foregroundStyle(.secondary)
                     }
                     if let notice = discovery.notice { Text(notice).font(.caption).foregroundStyle(.secondary) }
+                    if account.freshLoading { ProgressView("Updating YouTube searches").font(.caption) }
+                    if let date = account.freshLastUpdated {
+                        Text("YouTube searches updated \(date.formatted(date: .abbreviated, time: .shortened)) · automatic refresh daily")
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
+                    if let notice = account.freshNotice { Text(notice).font(.caption).foregroundStyle(.secondary) }
+                    Text("\(visibleVideos.count) videos").font(.caption).foregroundStyle(.secondary)
+                    if let feedback = recommendationFeedback {
+                        HStack {
+                            Text(feedback).font(.footnote).foregroundStyle(.secondary)
+                            Spacer()
+                            if previousRecommendationPreferences != nil { Button("Undo") { undoRecommendationChange() } }
+                        }
+                        .accessibilityElement(children: .contain)
+                    }
                     Picker("Sort recommendations", selection: $recommendationOrder) {
                         ForEach(FocusRecommendations.Order.allCases) { order in Text(order.rawValue).tag(order) }
                     }.pickerStyle(.menu)
-                    Text("Sorts the videos currently loaded. Videos with unknown publication dates appear last.")
+                    Text("Sorts the videos currently loaded. The age filter can exclude videos without a known date.")
                         .font(.caption).foregroundStyle(.secondary)
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 8) {
@@ -373,8 +439,25 @@ struct FocusScreen: View {
                             }
                         }
                     }
+                    if visibleVideos.isEmpty {
+                        Text("No videos match these filters. Try a longer time range, another topic, or refresh.")
+                            .font(.subheadline).foregroundStyle(.secondary)
+                    }
                     ForEach(Array(visibleVideos.prefix(recommendationLimit))) { video in
-                        Button { browser.open(video.url) } label: { recommendationRow(video) }.buttonStyle(.plain)
+                        HStack(alignment: .top, spacing: 4) {
+                            Button { browser.open(video.url) } label: { recommendationRow(video) }.buttonStyle(.plain)
+                            Menu {
+                                Button { updateRecommendationPreferences(message: "Saved. Use Recommended order to see the effect.", unchangedMessage: "This channel and topic are already prioritized as much as possible.") { $0.moreLike(video) } } label: {
+                                    Label("More like this", systemImage: "hand.thumbsup")
+                                }
+                                Button { updateRecommendationPreferences(message: "Video hidden from recommendations.") { $0.hide(video) } } label: {
+                                    Label("Not interested", systemImage: "eye.slash")
+                                }
+                            } label: {
+                                Image(systemName: "ellipsis").frame(width: 44, height: 44)
+                            }
+                            .accessibilityLabel("Recommendation options for \(video.title)")
+                        }
                     }
                     if visibleVideos.count > recommendationLimit {
                         Button("Show 15 more") { recommendationLimit += 15 }
@@ -457,7 +540,7 @@ struct FocusScreen: View {
                 Text(video.title).font(.subheadline.weight(.semibold)).fixedSize(horizontal: false, vertical: true).multilineTextAlignment(.leading)
                 Text(video.channel).font(.caption).foregroundStyle(.secondary).multilineTextAlignment(.leading)
                 if let date = video.publishedAt {
-                    Text("Published \(date.formatted(date: .abbreviated, time: .omitted))").font(.caption2).foregroundStyle(.secondary)
+                    Text(date > Date() ? "Publication date: \(date.formatted(date: .abbreviated, time: .omitted)) (future)" : "Published \(date.formatted(date: .abbreviated, time: .omitted))").font(.caption2).foregroundStyle(.secondary)
                 } else {
                     Text("Publication date unavailable").font(.caption2).foregroundStyle(.secondary)
                 }
@@ -467,6 +550,95 @@ struct FocusScreen: View {
         .padding(.vertical, 8).frame(maxWidth: .infinity, minHeight: 60, alignment: .leading)
         .contentShape(Rectangle()).accessibilityElement(children: .combine)
     }
+
+    private var recommendationPreferences: FocusRankingPreferences {
+        guard let data = recommendationPreferencesJSON.data(using: .utf8),
+              let stored = try? JSONDecoder().decode(FocusRankingPreferences.self, from: data) else { return .init() }
+        return stored
+    }
+
+    private func saveRecommendationPreferences(_ preferences: FocusRankingPreferences) -> Bool {
+        guard let data = try? JSONEncoder().encode(preferences),
+              let json = String(data: data, encoding: .utf8) else { return false }
+        recommendationPreferencesJSON = json
+        return true
+    }
+
+    private func updateRecommendationPreferences(message: String, unchangedMessage: String? = nil, _ update: (inout FocusRankingPreferences) -> Void) {
+        let previous = recommendationPreferences
+        var updated = previous
+        update(&updated)
+        guard updated != previous else {
+            if let unchangedMessage {
+                previousRecommendationPreferences = nil
+                recommendationFeedback = unchangedMessage
+            }
+            return
+        }
+        guard saveRecommendationPreferences(updated) else { return }
+        previousRecommendationPreferences = previous
+        recommendationFeedback = message
+        recommendationLimit = 15
+    }
+
+    private func undoRecommendationChange() {
+        guard let previous = previousRecommendationPreferences,
+              saveRecommendationPreferences(previous) else { return }
+        previousRecommendationPreferences = nil
+        recommendationFeedback = nil
+    }
+
+    private var recommendationSettings: some View {
+        NavigationStack {
+            Form {
+                Section("Video age") {
+                    Picker("Published", selection: Binding<Int?>(
+                        get: { recommendationPreferences.maxAgeMonths },
+                        set: { age in updateRecommendationPreferences(message: "Age filter updated.") { $0.maxAgeMonths = age } }
+                    )) {
+                        Text("Any age").tag(Optional<Int>.none)
+                        Text("Past year").tag(Optional.some(12))
+                        Text("Past 2 years").tag(Optional.some(24))
+                        Text("Past 3 years").tag(Optional.some(36))
+                    }
+                    Text("With an age limit, videos without a known date or more than 24 hours in the future are hidden.")
+                        .font(.footnote).foregroundStyle(.secondary)
+                }
+                Section("Feedback") {
+                    Button("Show hidden videos (\(recommendationPreferences.hiddenIDs.count))") {
+                        updateRecommendationPreferences(message: "Videos unhidden. Your other filters still apply.") { $0.unhideAll() }
+                    }.disabled(recommendationPreferences.hiddenIDs.isEmpty)
+                    Button("Reset recommendation preferences", role: .destructive) { confirmRecommendationReset = true }
+                        .disabled(recommendationPreferences == .init())
+                    if let feedback = recommendationFeedback {
+                        HStack {
+                            Text(feedback).font(.footnote).foregroundStyle(.secondary)
+                            Spacer()
+                            if previousRecommendationPreferences != nil { Button("Undo") { undoRecommendationChange() } }
+                        }
+                    }
+                    Text("More like this affects Recommended order.")
+                        .font(.footnote).foregroundStyle(.secondary)
+                }
+                Section("Privacy") {
+                    Text("Your feedback and age filter stay on this device. Resetting them does not change your YouTube subscriptions.")
+                        .font(.footnote).foregroundStyle(.secondary)
+                }
+            }
+            .navigationTitle("Recommendations")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { showRecommendationSettings = false } } }
+            .confirmationDialog("Reset recommendation preferences?", isPresented: $confirmRecommendationReset, titleVisibility: .visible) {
+                Button("Reset preferences", role: .destructive) {
+                    updateRecommendationPreferences(message: "Preferences reset.") { $0 = .init() }
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("This clears feedback and resets the age limit to the past 2 years. Your subscriptions stay the same.")
+            }
+        }
+    }
+
     private func search() { typing = false; browser.submit(input) }
     private var selectedIDs: Set<String> { Set(selectedChannelIDs.split(separator: ",").map(String.init)) }
     private func loadSelectedUploads() async {

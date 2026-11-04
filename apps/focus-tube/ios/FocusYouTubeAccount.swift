@@ -14,6 +14,7 @@ struct FocusAccountTestHooks {
     let authenticate: (URL, String) async throws -> URL
     let observeTokenRequest: (URLRequest) -> Void
     let now: () -> Date
+    let freshCache: UserDefaults
     let read: () throws -> Data?
     let write: (Data) throws -> Void
     let delete: () -> Void
@@ -45,6 +46,35 @@ final class FocusYouTubeAccount: NSObject, ObservableObject, ASWebAuthentication
     @Published private(set) var syncSucceeded = false
     @Published private(set) var signInSucceeded = false
     @Published private(set) var notice: String?
+    /// Public, fixed-topic YouTube searches; never derived from private account data.
+    @Published private(set) var freshVideos: [FocusRecommendation] = []
+    @Published private(set) var freshLastUpdated: Date?
+    @Published private(set) var freshNotice: String?
+    @Published private(set) var freshLoading = false
+    private let freshCacheKey = "focus.youtube.discovery.v1"
+    private let freshAttemptKey = "focus.youtube.discovery.attempt.v1"
+    // Kept across sign-out: reconnecting must not bypass the shared API budget.
+    private let freshBudgetAttemptsKey = "focus.youtube.discovery.search-budget.v1"
+    private let freshSuccessInterval: TimeInterval = 24 * 60 * 60
+    private let freshRetryInterval: TimeInterval = 6 * 60 * 60
+    private let freshSearchInterval: TimeInterval = 5 * 60
+    private let freshSearchDailyLimit = 12
+    private let freshRetention: TimeInterval = 7 * 24 * 60 * 60
+    private var freshSearchWork: Task<[FreshSearchBatch], Never>?
+    private var freshMetadataWork: Task<[FreshMetadataBatch], Never>?
+
+    private struct FreshCache: Codable {
+        let videos: [FocusRecommendation]
+        let updatedAt: Date
+        let partial: Bool
+    }
+
+    private var freshCacheStore: UserDefaults {
+        #if FOCUS_ACCOUNT_TESTING
+        if let store = testHooks?.freshCache { return store }
+        #endif
+        return .standard
+    }
     private var lastSyncedAt: Date?
     private var lastRefreshFailureAt: Date?
     private var consecutiveRefreshFailures = 0
@@ -131,11 +161,34 @@ final class FocusYouTubeAccount: NSObject, ObservableObject, ASWebAuthentication
         }
         let items: [Item]
     }
+    private struct FreshSearchResponse: Decodable {
+        struct Item: Decodable {
+            struct Resource: Decodable { let videoId: String? }
+            struct Snippet: Decodable { let title: String; let channelTitle: String }
+            let id: Resource
+            let snippet: Snippet
+        }
+        let items: [Item]
+    }
     private struct Candidate: Sendable {
         let id: String
         let title: String
         let channel: String
         let publishedAt: Date
+    }
+    private struct FreshCandidate: Sendable {
+        let id: String
+        let title: String
+        let channel: String
+        let topic: String
+    }
+    private struct FreshSearchBatch: Sendable {
+        let items: [FreshCandidate]?
+        let failure: FocusDiagnosticCode?
+    }
+    private struct FreshMetadataBatch: Sendable {
+        let dates: [String: Date]?
+        let failure: FocusDiagnosticCode?
     }
     private let service = "dev.palamabron.focustube.google-api"
     private var session: ASWebAuthenticationSession?
@@ -173,18 +226,217 @@ final class FocusYouTubeAccount: NSObject, ObservableObject, ASWebAuthentication
     override init() {
         super.init()
         restoreCredentials()
+        restoreFreshCache()
     }
     #if FOCUS_ACCOUNT_TESTING
     init(testHooks: FocusAccountTestHooks) {
         self.testHooks = testHooks
         super.init()
         restoreCredentials()
+        restoreFreshCache()
     }
     #endif
     private func restoreCredentials() {
         if let client = clientID, let stored = try? readCredentials(), stored.clientID == client {
             credentials = stored
             signedIn = true
+        }
+    }
+
+    private func restoreFreshCache() {
+        guard let data = freshCacheStore.data(forKey: freshCacheKey),
+              let cached = try? JSONDecoder().decode(FreshCache.self, from: data) else { return }
+        guard cached.updatedAt <= now, now.timeIntervalSince(cached.updatedAt) < freshRetention else {
+            freshCacheStore.removeObject(forKey: freshCacheKey)
+            return
+        }
+        freshVideos = Array(cached.videos.filter {
+            FocusPolicy.validID($0.id) && FocusRecommendations.topics.contains($0.topic)
+                && !$0.title.isEmpty && !$0.channel.isEmpty && $0.publishedAt != nil
+        }.prefix(60))
+        freshLastUpdated = cached.updatedAt
+        if cached.partial { freshNotice = "Some YouTube searches could not be refreshed." }
+    }
+
+    /// Searches only these four fixed public topics, independently of subscriptions,
+    /// saved videos, account history and all local recommendation preferences.
+    /// Search relevance and age are discovery signals, not judgments of quality.
+    func refreshFreshVideosIfNeeded() async {
+        await refreshFreshVideos(force: false)
+    }
+
+    /// A user-initiated refresh can bypass the automatic cache, but is still
+    /// rate limited so repeated taps cannot exhaust the project's quota.
+    func refreshFreshVideos(force: Bool) async {
+        if let updated = freshLastUpdated, now.timeIntervalSince(updated) >= freshRetention {
+            freshVideos = []; freshLastUpdated = nil
+            freshCacheStore.removeObject(forKey: freshCacheKey)
+        }
+        guard signedIn else {
+            freshNotice = "Connect Google to refresh recent YouTube discoveries."
+            return
+        }
+        guard !busy, !freshLoading else {
+            if force { freshNotice = freshLoading ? "YouTube search is already in progress." : "Google account is busy. Try refreshing again shortly." }
+            return
+        }
+        let clock = now
+        let searchAttempts = (freshCacheStore.array(forKey: freshBudgetAttemptsKey) as? [Date] ?? [])
+            .filter { $0 <= clock && clock.timeIntervalSince($0) < 24 * 60 * 60 }.sorted()
+        let cache = freshCacheStore.data(forKey: freshCacheKey).flatMap { try? JSONDecoder().decode(FreshCache.self, from: $0) }
+        let budgetNotice: String?
+        if let last = searchAttempts.last, clock.timeIntervalSince(last) < freshSearchInterval {
+            let minutes = max(1, Int(ceil((freshSearchInterval - clock.timeIntervalSince(last)) / 60)))
+            budgetNotice = "Please wait \(minutes) min before searching YouTube again."
+        } else if searchAttempts.count >= freshSearchDailyLimit, let first = searchAttempts.first {
+            let minutes = max(1, Int(ceil((24 * 60 * 60 - clock.timeIntervalSince(first)) / 60)))
+            budgetNotice = "YouTube search limit reached. Try again in \(minutes) min."
+        } else {
+            budgetNotice = nil
+        }
+        if freshNotice?.hasPrefix("Please wait ") == true || freshNotice?.hasPrefix("YouTube search limit reached.") == true {
+            freshNotice = budgetNotice ?? (cache?.partial == true ? "Some YouTube searches could not be refreshed." : nil)
+        }
+        if !force {
+            if let cache, cache.updatedAt <= clock,
+               clock.timeIntervalSince(cache.updatedAt) < (cache.partial ? freshRetryInterval : freshSuccessInterval) {
+                if freshNotice == "Connect Google to refresh recent YouTube discoveries."
+                    || freshNotice == "YouTube search is already in progress."
+                    || freshNotice == "Google account is busy. Try refreshing again shortly." {
+                    freshNotice = cache.partial ? "Some YouTube searches could not be refreshed." : nil
+                }
+                return
+            }
+            if let attempt = freshCacheStore.object(forKey: freshAttemptKey) as? Date,
+               attempt <= clock, clock.timeIntervalSince(attempt) < freshRetryInterval { return }
+        }
+        if let budgetNotice { freshNotice = budgetNotice; return }
+        busy = true; freshLoading = true
+        FocusDiagnostics.shared.record(.freshSearchStarted)
+        let requestGeneration = generation
+        defer { busy = false; freshLoading = false }
+        do {
+            let token = try await accessToken()
+            guard requestGeneration == generation else { return }
+            freshCacheStore.set(searchAttempts + [now], forKey: freshBudgetAttemptsKey)
+            freshCacheStore.set(now, forKey: freshAttemptKey)
+            let after = ISO8601DateFormatter().string(from: now.addingTimeInterval(-365 * 24 * 60 * 60))
+            let searches = [
+                ("machine learning", "AI & ML"), ("science research", "Science & math"),
+                ("computer science", "Computing"), ("startup entrepreneurship", "Startups & economics")
+            ]
+            let network = self.network
+            // Run only four fixed queries concurrently. The account remains busy,
+            // but bounded parallel requests avoid blocking it for four timeouts.
+            let searchWork = Task { await withTaskGroup(of: (Int, FreshSearchBatch).self, returning: [FreshSearchBatch].self) { group in
+                for (index, search) in searches.enumerated() {
+                    group.addTask {
+                        do {
+                            try Task.checkCancellation()
+                            let result: FreshSearchResponse = try await Self.apiRequest("search", query: [
+                                .init(name: "part", value: "snippet"), .init(name: "type", value: "video"),
+                                .init(name: "q", value: search.0), .init(name: "order", value: "relevance"),
+                                .init(name: "publishedAfter", value: after), .init(name: "maxResults", value: "25"),
+                                .init(name: "relevanceLanguage", value: "en")
+                            ], token: token, network: network, timeout: 12)
+                            let items: [FreshCandidate] = result.items.prefix(25).compactMap { item in
+                                guard let id = item.id.videoId, FocusPolicy.validID(id),
+                                      !item.snippet.title.isEmpty, !item.snippet.channelTitle.isEmpty else { return nil }
+                                return FreshCandidate(id: id, title: String(item.snippet.title.prefix(200)),
+                                    channel: String(item.snippet.channelTitle.prefix(100)), topic: search.1)
+                            }
+                            return (index, FreshSearchBatch(items: items, failure: nil))
+                        } catch { return (index, FreshSearchBatch(items: nil, failure: Self.diagnosticCode(error))) }
+                    }
+                }
+                var ordered = Array(repeating: FreshSearchBatch(items: nil, failure: .other), count: searches.count)
+                for await (index, values) in group { ordered[index] = values }
+                return ordered
+            } }
+            freshSearchWork = searchWork
+            let results = await searchWork.value
+            guard requestGeneration == generation else { return }
+            freshSearchWork = nil
+            let failures = results.filter { $0.items == nil }.count
+            let searchFailureCode = results.compactMap(\.failure).first
+            let lists = results.map { $0.items ?? [] }
+            var candidates: [FreshCandidate] = []
+            var seen = Set<String>()
+            for offset in 0..<25 {
+                for list in lists where offset < list.count {
+                    let item = list[offset]
+                    if seen.insert(item.id).inserted { candidates.append(item) }
+                }
+            }
+            let batches = stride(from: 0, to: candidates.count, by: 50).map { start in
+                Array(candidates[start..<min(start + 50, candidates.count)]).map(\.id).joined(separator: ",")
+            }
+            let validationTime = now
+            let metadataWork = Task { await withTaskGroup(of: FreshMetadataBatch.self, returning: [FreshMetadataBatch].self) { group in
+                for ids in batches {
+                    group.addTask {
+                        do {
+                            try Task.checkCancellation()
+                            let result: VideosResponse = try await Self.apiRequest("videos", query: [
+                                .init(name: "part", value: "contentDetails,snippet"), .init(name: "id", value: ids)
+                            ], token: token, network: network, timeout: 12)
+                            var dates: [String: Date] = [:]
+                            for item in result.items where item.snippet.liveBroadcastContent == "none" {
+                                guard (Self.durationSeconds(item.contentDetails.duration) ?? 0) > 180,
+                                      let date = FocusRecommendations.publishedDate(item.snippet.publishedAt),
+                                      date <= validationTime, validationTime.timeIntervalSince(date) <= 365 * 24 * 60 * 60 else { continue }
+                                dates[item.id] = date
+                            }
+                            return FreshMetadataBatch(dates: dates, failure: nil)
+                        } catch { return FreshMetadataBatch(dates: nil, failure: Self.diagnosticCode(error)) }
+                    }
+                }
+                var values: [FreshMetadataBatch] = []
+                for await value in group { values.append(value) }
+                return values
+            } }
+            freshMetadataWork = metadataWork
+            let checked = await metadataWork.value
+            guard requestGeneration == generation else { return }
+            freshMetadataWork = nil
+            if let failure = checked.first(where: { $0.dates == nil }) {
+                FocusDiagnostics.shared.record(.freshSearchFailed, code: failure.failure ?? .other)
+                freshNotice = freshVideos.isEmpty ? "YouTube discovery could not be refreshed." : "YouTube discovery could not be refreshed. Showing the last saved results."
+                return
+            }
+            var valid: [String: Date] = [:]
+            for result in checked { if let dates = result.dates { valid.merge(dates) { first, _ in first } } }
+            var perChannel: [String: Int] = [:]
+            let found = candidates.compactMap { item -> FocusRecommendation? in
+                guard let date = valid[item.id] else { return nil }
+                let channel = item.channel.lowercased()
+                guard (perChannel[channel] ?? 0) < 3 else { return nil }
+                perChannel[channel, default: 0] += 1
+                return FocusRecommendation(id: item.id, title: item.title, channel: item.channel,
+                    topic: item.topic, reason: "Recent YouTube search result", publishedAt: date)
+            }
+            guard !found.isEmpty else {
+                if failures > 0 {
+                    FocusDiagnostics.shared.record(.freshSearchFailed, code: searchFailureCode ?? .other)
+                    freshNotice = freshVideos.isEmpty ? "YouTube discovery could not be refreshed." : "YouTube discovery could not be refreshed. Showing the last saved results."
+                } else {
+                    FocusDiagnostics.shared.record(.freshSearchSucceeded)
+                    freshNotice = freshVideos.isEmpty ? "No recent videos matched these searches." : "No recent videos matched. Showing the last saved results."
+                }
+                return
+            }
+            let values = Array(found.prefix(60))
+            let updated = now
+            let cached = FreshCache(videos: values, updatedAt: updated, partial: failures > 0)
+            if let data = try? JSONEncoder().encode(cached) { freshCacheStore.set(data, forKey: freshCacheKey) }
+            freshVideos = values
+            freshLastUpdated = updated
+            FocusDiagnostics.shared.record(failures > 0 ? .freshSearchFailed : .freshSearchSucceeded, code: failures > 0 ? (searchFailureCode ?? .other) : nil)
+            freshNotice = failures > 0 ? "Some YouTube searches could not be refreshed." : nil
+        } catch {
+            guard requestGeneration == generation else { return }
+            FocusDiagnostics.shared.record(.freshSearchFailed, code: Self.diagnosticCode(error))
+            freshNotice = freshVideos.isEmpty ? "YouTube discovery could not be refreshed." : "YouTube discovery could not be refreshed. Showing the last saved results."
         }
     }
 
@@ -196,6 +448,7 @@ final class FocusYouTubeAccount: NSObject, ObservableObject, ASWebAuthentication
             return
         }
         busy = true; notice = nil
+        FocusDiagnostics.shared.record(.signInStarted)
         let requestGeneration = generation
         defer { busy = false }
         do {
@@ -231,10 +484,14 @@ final class FocusYouTubeAccount: NSObject, ObservableObject, ASWebAuthentication
                                      expiresAt: Date().addingTimeInterval(max(0, token.expires_in - 60)))
             try writeCredentials(stored)
             credentials = stored; signedIn = true; syncSucceeded = false; signInSucceeded = true; lastSyncedAt = nil; clearRefreshFailure()
+            FocusDiagnostics.shared.record(.signInSucceeded)
             channels = []; uploads = []; connectedChannel = nil
+            let previousFresh = freshCacheStore.data(forKey: freshCacheKey).flatMap { try? JSONDecoder().decode(FreshCache.self, from: $0) }
+            freshNotice = previousFresh?.partial == true ? "Some YouTube searches could not be refreshed." : nil
             notice = token.refresh_token == nil ? "Connected, but Google did not provide a refresh token. You may need to sign in again. Playback sign-in is separate." : "Connected to the YouTube Data API. Playback sign-in is separate."
         } catch {
             guard requestGeneration == generation else { return }
+            FocusDiagnostics.shared.record(.signInFailed, code: Self.diagnosticCode(error))
             notice = error is ASWebAuthenticationSessionError ? "Sign-in was cancelled or could not be completed." : (error as? LocalizedError)?.errorDescription ?? "Could not connect to Google."
         }
     }
@@ -242,6 +499,7 @@ final class FocusYouTubeAccount: NSObject, ObservableObject, ASWebAuthentication
     func sync() async {
         guard !busy else { return }
         busy = true; notice = nil; syncSucceeded = false
+        FocusDiagnostics.shared.record(.subscriptionSyncStarted)
         let requestGeneration = generation
         defer { busy = false }
         do {
@@ -271,8 +529,9 @@ final class FocusYouTubeAccount: NSObject, ObservableObject, ASWebAuthentication
             channels = all
             connectedChannel = own?.items.first.map { String($0.snippet.title.prefix(200)) }
             syncSucceeded = true; lastSyncedAt = now
+            FocusDiagnostics.shared.record(.subscriptionSyncSucceeded)
             notice = next == nil ? "Subscriptions updated. Choose channels to load recent uploads." : "Showing the first 1,000 subscriptions."
-        } catch { if requestGeneration == generation { recordRefreshFailure(); notice = (error as? LocalizedError)?.errorDescription ?? "Could not load subscriptions." } }
+        } catch { if requestGeneration == generation { FocusDiagnostics.shared.record(.subscriptionSyncFailed, code: Self.diagnosticCode(error)); recordRefreshFailure(); notice = (error as? LocalizedError)?.errorDescription ?? "Could not load subscriptions." } }
     }
 
     // Returning to the app repeatedly should not consume API quota each time.
@@ -291,6 +550,7 @@ final class FocusYouTubeAccount: NSObject, ObservableObject, ASWebAuthentication
         guard !busy else { return }
         guard !selected.isEmpty else { notice = "Choose at least one channel."; return }
         busy = true; notice = nil
+        FocusDiagnostics.shared.record(.uploadLoadStarted)
         let requestGeneration = generation
         let currentUploadsGeneration = uploadsGeneration
         defer { busy = false }
@@ -339,9 +599,10 @@ final class FocusYouTubeAccount: NSObject, ObservableObject, ASWebAuthentication
                 return Upload(id: candidate.id, title: candidate.title, channel: candidate.channel, publishedAt: publicationDates[candidate.id])
             }
             uploads = Array(FocusRecommendations.sortByPublication(published, order: .newest, date: { $0.publishedAt }).prefix(60))
+            FocusDiagnostics.shared.record(failed > 0 ? .uploadLoadFailed : .uploadLoadSucceeded)
             if failed > 0 { recordRefreshFailure() } else { clearRefreshFailure() }
             notice = unique.count > 30 ? "Showing uploads from the first 30 selected channels." : (failed > 0 ? "Some channels could not be refreshed." : (uploads.isEmpty ? "No eligible recent videos were found." : nil))
-        } catch { if requestGeneration == generation, currentUploadsGeneration == uploadsGeneration { recordRefreshFailure(); notice = (error as? LocalizedError)?.errorDescription ?? "Could not load uploads." } }
+        } catch { if requestGeneration == generation, currentUploadsGeneration == uploadsGeneration { FocusDiagnostics.shared.record(.uploadLoadFailed, code: Self.diagnosticCode(error)); recordRefreshFailure(); notice = (error as? LocalizedError)?.errorDescription ?? "Could not load uploads." } }
     }
 
     func clearUploads() {
@@ -353,7 +614,12 @@ final class FocusYouTubeAccount: NSObject, ObservableObject, ASWebAuthentication
     func signOut() {
         generation += 1
         session?.cancel(); session = nil
+        freshSearchWork?.cancel(); freshSearchWork = nil
+        freshMetadataWork?.cancel(); freshMetadataWork = nil
         credentials = nil; signedIn = false; syncSucceeded = false; signInSucceeded = false; connectedChannel = nil; channels = []; uploads = []; lastSyncedAt = nil; clearRefreshFailure()
+        freshVideos = []; freshLastUpdated = nil; freshNotice = nil
+        freshCacheStore.removeObject(forKey: freshCacheKey)
+        freshCacheStore.removeObject(forKey: freshAttemptKey)
         deleteCredentials()
         notice = "Local API credentials removed. Playback sign-in is separate."
     }
@@ -413,12 +679,13 @@ final class FocusYouTubeAccount: NSObject, ObservableObject, ASWebAuthentication
     private func api<T: Decodable>(_ path: String, query: [URLQueryItem], token: String) async throws -> T {
         try await Self.apiRequest(path, query: query, token: token, network: network)
     }
-    nonisolated private static func apiRequest<T: Decodable>(_ path: String, query: [URLQueryItem], token: String, network: URLSession) async throws -> T {
-        guard ["subscriptions", "channels", "playlistItems", "videos"].contains(path) else { throw Failure.invalidResponse }
+    nonisolated private static func apiRequest<T: Decodable>(_ path: String, query: [URLQueryItem], token: String, network: URLSession, timeout: TimeInterval? = nil) async throws -> T {
+        guard ["subscriptions", "channels", "playlistItems", "videos", "search"].contains(path) else { throw Failure.invalidResponse }
         var url = URLComponents(string: "https://www.googleapis.com/youtube/v3/" + path)!
         url.queryItems = query
         guard let target = url.url else { throw Failure.invalidResponse }
         var request = URLRequest(url: target)
+        if let timeout { request.timeoutInterval = timeout }
         request.setValue("Bearer " + token, forHTTPHeaderField: "Authorization")
         let (data, response) = try await network.data(for: request)
         guard let response = response as? HTTPURLResponse, (200..<300).contains(response.statusCode), data.count < 2_000_000 else { throw Failure.api }
@@ -488,6 +755,31 @@ final class FocusYouTubeAccount: NSObject, ObservableObject, ASWebAuthentication
             case .security: return "Could not store credentials securely on this device."
             }
         }
+    }
+
+    // Convert known failures into a small closed vocabulary; never persist the
+    // original error, description, response, URL, account identifier or token.
+    nonisolated private static func diagnosticCode(_ error: Error) -> FocusDiagnosticCode {
+        if let failure = error as? Failure {
+            switch failure {
+            case .authorization: return .authorization
+            case .invalidResponse: return .invalidResponse
+            case .notSignedIn: return .notSignedIn
+            case .api: return .api
+            case .security: return .security
+            }
+        }
+        let issue = error as NSError
+        if issue.domain == NSURLErrorDomain {
+            switch issue.code {
+            case NSURLErrorTimedOut: return .timeout
+            case NSURLErrorNotConnectedToInternet: return .offline
+            case NSURLErrorNetworkConnectionLost, NSURLErrorCannotConnectToHost,
+                 NSURLErrorCannotFindHost, NSURLErrorDNSLookupFailed: return .network
+            default: break
+            }
+        }
+        return .other
     }
 }
 

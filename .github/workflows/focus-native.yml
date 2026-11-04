@@ -28,6 +28,8 @@ jobs:
           /tmp/focus-policy-tests
           swiftc ios/FocusOAuthForm.swift tests/FocusOAuthFormTests.swift -o /tmp/focus-oauth-form-tests
           /tmp/focus-oauth-form-tests
+          swiftc ios/FocusDiagnostics.swift tests/FocusDiagnosticsTests.swift -o /tmp/focus-diagnostics-tests
+          /tmp/focus-diagnostics-tests
       - name: Build standalone unsigned iPhone app
         run: node scripts/build-native-ios.mjs
         env:
