@@ -258,6 +258,34 @@ private func testAutomaticRetry() async throws {
     bed.now.addTimeInterval(2)
     let recovered = await account.syncIfNeeded()
     try check(recovered && account.syncSucceeded, "A later failure must retry successfully after the delay")
+    await account.loadUploads(for: account.channels)
+
+    let repeatedBed = TestBed()
+    configure("partial")
+    let repeated = repeatedBed.makeAccount()
+    await repeated.signIn(); await repeated.sync(); await repeated.loadUploads(for: repeated.channels)
+    for delay in [300, 600, 1200, 1800, 1800] {
+        configure("partial")
+        repeatedBed.now.addTimeInterval(TimeInterval(delay - 1))
+        let early = await repeated.syncIfNeeded()
+        try check(!early && MockURLProtocol.requests().isEmpty, "Repeated failures must back off before retrying")
+        repeatedBed.now.addTimeInterval(2)
+        let due = await repeated.syncIfNeeded()
+        try check(due, "Repeated failures should retry when backoff expires")
+        await repeated.loadUploads(for: repeated.channels)
+        try check(repeated.notice != nil, "The partial failure must remain visible")
+    }
+    configure(nil)
+    repeatedBed.now.addTimeInterval(1801)
+    let retryAfterBackoff = await repeated.syncIfNeeded()
+    try check(retryAfterBackoff, "A full refresh must retry after the capped delay")
+    await repeated.loadUploads(for: repeated.channels)
+    configure("partial")
+    await repeated.loadUploads(for: repeated.channels)
+    configure(nil)
+    repeatedBed.now.addTimeInterval(301)
+    let resetDelay = await repeated.syncIfNeeded()
+    try check(resetDelay, "A full success must reset later failures to the initial delay")
 }
 
 @MainActor
