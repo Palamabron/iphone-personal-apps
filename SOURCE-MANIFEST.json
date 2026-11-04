@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-04T14:47:56.139Z",
+  "generatedAt": "2026-11-04T17:24:30.801Z",
   "textLineEndings": "LF",
   "files": [
     {
@@ -49,8 +49,8 @@
     },
     {
       "path": "apps/focus-tube/ios/FocusApp.swift",
-      "bytes": 48929,
-      "sha256": "7afb88da6303baa26838e22a802f55ee27dc2c8073a12eb224ca97fcfb5fd295"
+      "bytes": 49340,
+      "sha256": "f0b0f7dafc6d691f6eb350d842c5979c83b75a1fb995dd896d9d569b7505e7c6"
     },
     {
       "path": "apps/focus-tube/ios/FocusDiagnostics.swift",
@@ -120,7 +120,7 @@
     {
       "path": "apps/focus-tube/scripts/build-native-ios.mjs",
       "bytes": 8551,
-      "sha256": "0e55a2bad18bf79c531585cef165c1caaf68b944ac5c5977326bee6eb6faa61e"
+      "sha256": "d175a12272edab38f720eb2ddc5c68474177a0640e453052416e7568e914164b"
     },
     {
       "path": "apps/focus-tube/scripts/build.mjs",
@@ -315,7 +315,7 @@
     {
       "path": "scripts/validate-ipa.py",
       "bytes": 3659,
-      "sha256": "068392e91b6a30639266df7dd6bfb20af6a4859b64cd412e3eeb8fe56460a997"
+      "sha256": "8e8f3adf8d935fb2ca13e5670d9782b20b3dd7a0c0a406d8f4926f0f8e12551b"
     }
   ]
 }

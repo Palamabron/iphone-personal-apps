@@ -18,10 +18,10 @@ private enum FocusTheme {
     private static func adaptive(light: UIColor, dark: UIColor) -> UIColor {
         UIColor { traits in traits.userInterfaceStyle == .dark ? dark : light }
     }
-    static let uiBackground = adaptive(light: UIColor(red: 0.965, green: 0.973, blue: 0.961, alpha: 1), dark: UIColor(red: 0.035, green: 0.055, blue: 0.050, alpha: 1))
+    static let uiBackground = adaptive(light: UIColor(red: 0.98, green: 0.98, blue: 0.98, alpha: 1), dark: UIColor(red: 0.055, green: 0.055, blue: 0.055, alpha: 1))
     static let background = Color(uiColor: uiBackground)
-    static let accent = Color(uiColor: adaptive(light: UIColor(red: 0.161, green: 0.349, blue: 0.278, alpha: 1), dark: UIColor(red: 0.81, green: 0.92, blue: 0.65, alpha: 1)))
-    static let surface = Color(uiColor: adaptive(light: .white, dark: UIColor(red: 0.095, green: 0.125, blue: 0.113, alpha: 1)))
+    static let accent = Color(uiColor: adaptive(light: UIColor(red: 0.72, green: 0.05, blue: 0.07, alpha: 1), dark: UIColor(red: 0.95, green: 0.32, blue: 0.32, alpha: 1)))
+    static let surface = Color(uiColor: adaptive(light: .white, dark: UIColor(red: 0.12, green: 0.12, blue: 0.12, alpha: 1)))
     static let border = Color.primary.opacity(0.09)
     static let corner: CGFloat = 18
 }
@@ -371,7 +371,7 @@ struct FocusScreen: View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 18) {
                 VStack(alignment: .leading, spacing: 6) {
-                    Text("Discover").font(.title2.weight(.bold))
+                    HStack(spacing: 8) { Image(systemName: "play.rectangle.fill").foregroundStyle(FocusTheme.accent); Text("Discover").foregroundStyle(.primary) }.font(.title2.weight(.bold))
                 }.padding(.top, 8)
 
                 HStack(spacing: 10) {
@@ -478,8 +478,8 @@ struct FocusScreen: View {
                                 Button { selectedTopic = topic; recommendationLimit = 15 } label: {
                                     Text(topic).font(.subheadline.weight(.medium)).padding(.horizontal, 14).padding(.vertical, 9)
                                         .frame(minHeight: 44)
-                                        .foregroundStyle(selectedTopic == topic ? FocusTheme.background : Color.primary)
-                                        .background(selectedTopic == topic ? FocusTheme.accent : FocusTheme.surface, in: Capsule())
+                                        .foregroundStyle(selectedTopic == topic ? Color.white : Color.primary)
+                                        .background(selectedTopic == topic ? Color(red: 0.68, green: 0.05, blue: 0.06) : FocusTheme.surface, in: Capsule())
                                 }.buttonStyle(.plain).accessibilityAddTraits(selectedTopic == topic ? .isSelected : [])
                             }
                         }
@@ -560,10 +560,13 @@ struct FocusScreen: View {
     }
 
     private var subscriptionsLink: some View {
-        Button { browser.open(URL(string: "https://m.youtube.com/feed/subscriptions")!) } label: {
+        Button {
+            if account.configured && account.signedIn { showChannels = true }
+            else { showAccount = true }
+        } label: {
             Label("Subscriptions", systemImage: "rectangle.stack")
                 .frame(maxWidth: .infinity, minHeight: 44)
-        }.buttonStyle(.bordered).tint(.primary).font(.subheadline.weight(.medium))
+        }.buttonStyle(.bordered).tint(.primary).font(.subheadline.weight(.medium)).disabled(account.busy)
     }
 
     private var accountLink: some View {
@@ -634,14 +637,20 @@ struct FocusScreen: View {
     }
 
     private func recommendationRow(_ video: FocusRecommendation) -> some View {
-        HStack(alignment: .top, spacing: 14) {
-            AsyncImage(url: URL(string: "https://i.ytimg.com/vi/\(video.id)/mqdefault.jpg")) { image in
-                image.resizable().scaledToFill()
-            } placeholder: {
-                Rectangle().fill(FocusTheme.surface).overlay(Image(systemName: "play.fill").foregroundStyle(FocusTheme.accent))
+        VStack(alignment: .leading, spacing: 10) {
+            GeometryReader { geometry in
+                AsyncImage(url: URL(string: "https://i.ytimg.com/vi/\(video.id)/hqdefault.jpg")) { image in
+                    image.resizable().scaledToFill()
+                } placeholder: {
+                    Rectangle().fill(FocusTheme.surface).overlay(Image(systemName: "play.fill").foregroundStyle(FocusTheme.accent))
+                }
+                .frame(width: geometry.size.width, height: geometry.size.height)
+                .clipped()
             }
-            .frame(width: 120, height: 68).clipped().clipShape(RoundedRectangle(cornerRadius: 9)).accessibilityHidden(true)
-            VStack(alignment: .leading, spacing: 5) {
+            .aspectRatio(16.0 / 9.0, contentMode: .fit)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 4) {
                 Text(video.title).font(.subheadline.weight(.semibold)).fixedSize(horizontal: false, vertical: true).multilineTextAlignment(.leading)
                 Text(video.channel).font(.caption).foregroundStyle(.secondary).multilineTextAlignment(.leading)
                 if let date = video.publishedAt {
@@ -652,7 +661,7 @@ struct FocusScreen: View {
                 Text(video.reason).font(.caption).foregroundStyle(.secondary).multilineTextAlignment(.leading)
             }.frame(maxWidth: .infinity, alignment: .leading)
         }
-        .padding(.vertical, 8).frame(maxWidth: .infinity, minHeight: 60, alignment: .leading)
+        .padding(.vertical, 8).frame(maxWidth: .infinity, alignment: .leading)
         .contentShape(Rectangle()).accessibilityElement(children: .combine)
     }
 
