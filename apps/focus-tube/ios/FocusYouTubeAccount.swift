@@ -17,7 +17,7 @@ struct FocusAccountTestHooks {
     let freshCache: UserDefaults
     let read: () throws -> Data?
     let write: (Data) throws -> Void
-    let delete: () -> Void
+    let delete: () throws -> Void
 }
 #endif
 
@@ -669,19 +669,26 @@ final class FocusYouTubeAccount: NSObject, ObservableObject, ASWebAuthentication
         clearRefreshFailure()
     }
 
-    func signOut() {
+    @discardableResult
+    func signOut() -> Bool {
         generation += 1
         pendingUploadSelection = nil
         session?.cancel(); session = nil
         freshSearchWork?.cancel(); freshSearchWork = nil
         freshMetadataWork?.cancel(); freshMetadataWork = nil
+        do {
+            try deleteCredentials()
+        } catch {
+            notice = "Could not remove local credentials. They may still be saved; try disconnecting again. Playback sign-in is separate."
+            return false
+        }
         credentials = nil; signedIn = false; syncSucceeded = false; subscriptionsComplete = false; signInSucceeded = false; connectedChannel = nil; channels = []; uploads = []; lastSyncedAt = nil; clearRefreshFailure()
         freshVideos = []; freshLastUpdated = nil; freshNotice = nil
         freshCacheStore.removeObject(forKey: freshCacheKey)
         freshCacheStore.removeObject(forKey: freshAttemptKey)
         freshCacheStore.removeObject(forKey: freshAttemptQueryVersionKey)
-        deleteCredentials()
         notice = "Local API credentials removed. Playback sign-in is separate."
+        return true
     }
 
     func presentationAnchor(for session: ASWebAuthenticationSession) -> ASPresentationAnchor {
@@ -800,11 +807,12 @@ final class FocusYouTubeAccount: NSObject, ObservableObject, ASWebAuthentication
             guard SecItemAdd(item as CFDictionary, nil) == errSecSuccess else { throw Failure.security }
         } else if status != errSecSuccess { throw Failure.security }
     }
-    private func deleteCredentials() {
+    private func deleteCredentials() throws {
         #if FOCUS_ACCOUNT_TESTING
-        if let hook = testHooks?.delete { hook(); return }
+        if let hook = testHooks?.delete { try hook(); return }
         #endif
-        SecItemDelete([kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: service, kSecAttrAccount as String: "oauth"] as CFDictionary)
+        let status = SecItemDelete([kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: service, kSecAttrAccount as String: "oauth"] as CFDictionary)
+        guard status == errSecSuccess || status == errSecItemNotFound else { throw Failure.security }
     }
     private enum Failure: LocalizedError {
         case invalidResponse, authorization, notSignedIn, api, security

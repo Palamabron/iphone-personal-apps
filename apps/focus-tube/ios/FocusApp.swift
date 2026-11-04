@@ -418,7 +418,7 @@ struct FocusScreen: View {
                                 recommendationRow(FocusRecommendation(id: video.id, title: video.title, channel: video.channel, topic: "Computing", reason: "From a selected subscription", publishedAt: video.publishedAt))
                             }.buttonStyle(.plain)
                         }
-                        Button("Disconnect subscriptions", role: .destructive) { account.signOut(); selectedChannelIDs = "" }.font(.footnote)
+                        Button("Disconnect subscriptions", role: .destructive) { if account.signOut() { selectedChannelIDs = "" } }.font(.footnote)
                         Button("Reconnect Google account") { Task { await account.signIn(); if account.signInSucceeded { await account.sync(); if account.syncSucceeded { await loadSelectedUploads() }; await account.refreshFreshVideosIfNeeded() } } }.font(.footnote).disabled(account.busy)
                     }
                     if let notice = account.notice { Text(notice).font(.caption).foregroundStyle(.secondary) }
@@ -594,8 +594,7 @@ struct FocusScreen: View {
                             Task { await account.sync(); if account.syncSucceeded { await loadSelectedUploads() } }
                         }.disabled(account.busy)
                         Button("Disconnect subscriptions", role: .destructive) {
-                            account.signOut()
-                            selectedChannelIDs = ""
+                            if account.signOut() { selectedChannelIDs = "" }
                         }.disabled(account.busy)
                     } else {
                         Text("Not connected to Google for subscriptions.")

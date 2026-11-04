@@ -67,6 +67,7 @@ private final class TestBed {
     enum CallbackMode: Equatable { case good, slowGood, wrongState, wrongScheme, duplicateState, duplicateCode, cancelled }
     var mode = CallbackMode.good
     var stored: Data?
+    var failDeletion = false
     var challenge: String?
     var tokenRequests: [URLRequest] = []
     var now = Date()
@@ -101,7 +102,10 @@ private final class TestBed {
             freshCache: freshCache,
             read: { [unowned self] in self.stored },
             write: { [unowned self] in self.stored = $0 },
-            delete: { [unowned self] in self.stored = nil }
+            delete: { [unowned self] in
+                if self.failDeletion { throw TestFailure(description: "Simulated Keychain error") }
+                self.stored = nil
+            }
         )
         return FocusYouTubeAccount(testHooks: hooks)
     }
@@ -802,6 +806,27 @@ private func testSelectionReconciliationRequiresCompleteSync() async throws {
 }
 
 @MainActor
+private func testCredentialDeletionFailure() async throws {
+    let bed = TestBed()
+    let account = bed.makeAccount()
+    MockURLProtocol.configure { request in
+        if request.url?.host == "oauth2.googleapis.com" {
+            return Reply(status: 200, json: tokenResponse)
+        }
+        return Reply(status: 200, json: #"{"items":[]}"#)
+    }
+    await account.signIn()
+    try check(account.signedIn && bed.stored != nil, "Sign in must store credentials")
+    bed.failDeletion = true
+    try check(!account.signOut(), "Failed Keychain deletion must fail sign out")
+    try check(account.signedIn && bed.stored != nil, "Failed deletion must preserve account state for retry")
+    try check(account.notice?.contains("Could not remove") == true, "Failure must be visible")
+    bed.failDeletion = false
+    try check(account.signOut(), "Retry after a temporary error must succeed")
+    try check(!account.signedIn && bed.stored == nil, "Successful sign out must clear credentials")
+}
+
+@MainActor
 private func testSignOutDuringAuthorization() async throws {
     let bed = TestBed(); bed.mode = .slowGood
     MockURLProtocol.configure { _ in Reply(status: 200, json: tokenResponse) }
@@ -888,6 +913,7 @@ struct AccountIntegrationTestApp: App {
                     try await testSelectionReconciliationRequiresCompleteSync()
                     print("FOCUS_ACCOUNT_TEST_STARTED: testSignOutDuringAuthorization")
                     fflush(stdout)
+                    try await testCredentialDeletionFailure()
                     try await testSignOutDuringAuthorization()
                     print("FOCUS_ACCOUNT_TEST_STARTED: testRedirectDelegate")
                     fflush(stdout)
