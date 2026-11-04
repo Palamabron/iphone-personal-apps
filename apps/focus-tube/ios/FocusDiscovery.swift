@@ -10,23 +10,28 @@ final class FocusDiscovery: ObservableObject {
     @Published private(set) var loading = false
     @Published private(set) var notice: String?
     private let cacheKey = "focus.discovery.v1"
-    private let refreshInterval: TimeInterval = 30 * 60
-
-    private struct Cache: Codable {
-        let videos: [FocusRecommendation]
-        let date: Date
-    }
+    private static let offlineHint = "Offline videos have no publication dates. Choose Any age in recommendation preferences to include them."
+    private var lastAttempt: Date?
+    private var partial = false
 
     init() {
         if let data = UserDefaults.standard.data(forKey: cacheKey),
-           let cache = try? JSONDecoder().decode(Cache.self, from: data) {
+           let cache = try? JSONDecoder().decode(FocusDiscoveryCache.self, from: data) {
             let safe = cache.videos.filter { FocusPolicy.validID($0.id) && FocusRecommendations.topics.contains($0.topic) }
-            if !safe.isEmpty { videos = Array(safe.prefix(96)); lastUpdated = cache.date }
+            videos = Array(safe.prefix(96))
+            lastUpdated = cache.date
+            partial = cache.partial ?? false
+            lastAttempt = cache.lastAttempt ?? cache.date
+            if partial {
+                notice = videos.isEmpty && lastUpdated == nil
+                    ? "Some sources could not be refreshed. " + Self.offlineHint
+                    : "Some sources could not be refreshed. Earlier results may still be shown."
+            }
         }
     }
 
     func refreshIfNeeded() async {
-        if let date = lastUpdated, Date().timeIntervalSince(date) < refreshInterval { return }
+        guard FocusRecommendations.needsDiscoveryRefresh(lastUpdated: lastUpdated, lastAttempt: lastAttempt, partial: partial, now: Date()) else { return }
         await refresh()
     }
 
@@ -49,41 +54,44 @@ final class FocusDiscovery: ObservableObject {
             Source(query: "Computerphile", topic: "Computing"),
             Source(query: "Patrick Boyle", topic: "Startups & economics")
         ]
-        let lists = await withTaskGroup(of: (Int, [FocusRecommendation]).self, returning: [[FocusRecommendation]].self) { group in
+        let lists = await withTaskGroup(of: (Int, [FocusRecommendation]?).self, returning: [[FocusRecommendation]?].self) { group in
             for (index, source) in sources.enumerated() {
                 group.addTask { (index, await Self.fetch(source)) }
             }
-            var received = Array(repeating: [FocusRecommendation](), count: sources.count)
+            var received = Array<[FocusRecommendation]?>(repeating: nil, count: sources.count)
             for await (index, items) in group { received[index] = items }
             return received
         }
         // Keep a mix across areas and preset channel searches, instead of letting
         // the fastest response fill the entire finite list.
-        var merged: [FocusRecommendation] = []
-        var seen = Set<String>()
+        var perSource = Array(repeating: [FocusRecommendation](), count: sources.count)
         for offset in 0..<8 {
-            for list in lists where offset < list.count {
-                let item = list[offset]
-                if seen.insert(item.id).inserted { merged.append(item) }
+            for (index, list) in lists.enumerated() {
+                if let list, offset < list.count { perSource[index].append(list[offset]) }
             }
         }
-        if merged.isEmpty {
+        let outcomes = sources.indices.map { index in
+            FocusDiscoveryResult(topic: sources[index].topic, videos: lists[index].map { _ in perSource[index] })
+        }
+        let merged = FocusRecommendations.mergeDiscovery(outcomes, previous: videos)
+        partial = merged.partial
+        lastAttempt = Date()
+        videos = merged.videos
+        if lists.allSatisfy({ if case .none = $0 { return true }; return false }) {
             FocusDiagnostics.shared.record(.recommendationsFailed)
-            notice = videos.isEmpty ? "Could not refresh. Showing the offline selection." : "Could not refresh. Showing the last saved selection."
+            notice = videos.isEmpty ? (lastUpdated == nil ? "Could not refresh. " + Self.offlineHint : "Could not refresh. No HackerTube videos are saved.") : "Could not refresh. Showing the last saved selection."
+        } else if partial {
+            FocusDiagnostics.shared.record(.recommendationsPartial, count: videos.count)
+            notice = videos.isEmpty && lastUpdated == nil
+                ? "Some sources could not be refreshed. " + Self.offlineHint
+                : "Some sources could not be refreshed. Earlier results may still be shown."
         } else {
-            // Rank after gathering a finite cross-topic pool, rather than
-            // discarding most candidates before freshness can be considered.
-            videos = Array(merged.prefix(96))
             lastUpdated = Date()
-            if lists.contains(where: { $0.isEmpty }) {
-                FocusDiagnostics.shared.record(.recommendationsPartial, count: videos.count)
-                notice = "Some sources did not return results."
-            } else {
-                FocusDiagnostics.shared.record(.recommendationsSucceeded, count: videos.count)
-            }
-            if let data = try? JSONEncoder().encode(Cache(videos: videos, date: lastUpdated!)) {
-                UserDefaults.standard.set(data, forKey: cacheKey)
-            }
+            FocusDiagnostics.shared.record(.recommendationsSucceeded, count: videos.count)
+            notice = videos.isEmpty ? "No HackerTube videos were found." : nil
+        }
+        if let data = try? JSONEncoder().encode(FocusDiscoveryCache(videos: videos, date: lastUpdated, partial: partial, lastAttempt: lastAttempt)) {
+            UserDefaults.standard.set(data, forKey: cacheKey)
         }
         loading = false
     }
@@ -108,20 +116,20 @@ final class FocusDiscovery: ObservableObject {
     }
     private struct SearchResponse: Decodable { let results: [Video] }
 
-    nonisolated private static func fetch(_ source: Source) async -> [FocusRecommendation] {
+    nonisolated private static func fetch(_ source: Source) async -> [FocusRecommendation]? {
         var components = URLComponents(string: source.area == nil ? "https://hackertube.org/api/search" : "https://hackertube.org/api/list")!
         if let area = source.area {
             components.queryItems = [URLQueryItem(name: "area", value: area), URLQueryItem(name: "sort", value: source.sort), URLQueryItem(name: "offset", value: "0"), URLQueryItem(name: "n", value: "12")]
         } else if let query = source.query {
             components.queryItems = [URLQueryItem(name: "q", value: query)]
         }
-        guard let url = components.url else { return [] }
+        guard let url = components.url else { return nil }
         var request = URLRequest(url: url)
         request.timeoutInterval = 15
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         do {
             let (data, response) = try await URLSession.shared.data(for: request)
-            guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode), data.count <= 2_000_000 else { return [] }
+            guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode), data.count <= 2_000_000 else { return nil }
             let decoder = JSONDecoder()
             let entries: [Video]
             if source.query != nil { entries = try decoder.decode(SearchResponse.self, from: data).results }
@@ -136,6 +144,6 @@ final class FocusDiscovery: ObservableObject {
                     shelfLife: ["evergreen", "dated", "news"].contains(video.shelf_life ?? "") ? video.shelf_life : nil,
                     hnRecommenders: recommenders.flatMap { $0 >= 0 ? min($0, 100_000) : nil })
             }
-        } catch { return [] }
+        } catch { return nil }
     }
 }

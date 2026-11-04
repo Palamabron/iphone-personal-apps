@@ -37,10 +37,10 @@ final class FocusDiagnostics: ObservableObject {
     private let capacity: Int
     @Published private(set) var entries: [FocusDiagnosticEntry]
 
-    init(store: UserDefaults = .standard, capacity: Int = FocusDiagnostics.maximumEntries, clock: @escaping () -> Date = Date.init) {
+    init(store: UserDefaults = .standard, capacity: Int? = nil, clock: @escaping () -> Date = Date.init) {
         self.store = store
         self.clock = clock
-        self.capacity = min(Self.maximumEntries, max(1, capacity))
+        self.capacity = min(Self.maximumEntries, max(1, capacity ?? Self.maximumEntries))
         let data = store.data(forKey: storageKey)
         let decoded = data.flatMap { try? JSONDecoder().decode([FocusDiagnosticEntry].self, from: $0) } ?? []
         self.entries = Array(decoded.suffix(self.capacity)).map {

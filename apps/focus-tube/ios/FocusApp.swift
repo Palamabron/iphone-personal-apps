@@ -89,7 +89,8 @@ final class FocusBrowser: NSObject, ObservableObject, WKNavigationDelegate, WKUI
         open(url)
     }
     func goHome() {
-        webView.evaluateJavaScript("document.querySelectorAll('video').forEach(v => v.pause())")
+        webView.stopLoading()
+        webView.pauseAllMediaPlayback(completionHandler: nil)
         home = true
     }
     func saveCurrent() {
@@ -276,6 +277,14 @@ struct FocusScreen: View {
                     }
                 }
             }
+            .onChange(of: account.subscriptionSyncRevision) { _, _ in
+                guard account.syncSucceeded, account.subscriptionsComplete else { return }
+                let retained = FocusYouTubeAccount.retainedSelectedIDs(selectedIDs, channels: account.channels, complete: true)
+                guard retained != selectedIDs else { return }
+                selectedChannelIDs = retained.sorted().joined(separator: ",")
+                account.clearUploads()
+                if !retained.isEmpty { Task { await loadSelectedUploads() } }
+            }
             .sheet(isPresented: $showInfo) {
                 NavigationStack { ScrollView { VStack(alignment: .leading, spacing: 18) {
                     Text("About Focus Tube").font(.title.bold())
@@ -283,7 +292,13 @@ struct FocusScreen: View {
                     Text("YouTube handles playback and sign-in. Google may block sign-in here. Premium, picture in picture and background playback need testing on your device. Offline playback is unavailable.")
                     Text("Premium playback test").font(.headline)
                     Text("Opens one public video in a system browser view. Sign in to your Premium account there if needed and check your account status. Shorts and feed filtering do not work in this view. The system view may use a separate sign-in from Focus Tube.").font(.footnote)
-                    Button("Open test video") { FocusDiagnostics.shared.record(.premiumTestOpened); showPremiumTest = true }.buttonStyle(.bordered)
+                    Button("Open test video") {
+                        Task {
+                            await browser.webView.pauseAllMediaPlayback()
+                            FocusDiagnostics.shared.record(.premiumTestOpened)
+                            showPremiumTest = true
+                        }
+                    }.buttonStyle(.bordered)
                     Text("HackerTube picks are separate from Google subscription sync. Saved videos stay on this device. This app does not block the official YouTube app.").foregroundStyle(.secondary)
                     Text("Selected subscription names and your feedback can influence Recommended order on this device. Different channels can share a name.").foregroundStyle(.secondary)
                     Text("Page check").font(.headline)
@@ -315,10 +330,9 @@ struct FocusScreen: View {
     }
 
     private var visibleVideos: [FocusRecommendation] {
-        let picks = discovery.videos.isEmpty ? FocusRecommendations.videos : discovery.videos
-        var seen = Set<String>()
-        let items = (picks + account.freshVideos).filter { seen.insert($0.id).inserted }
-        let filtered = selectedTopic == "All" ? items : items.filter { $0.topic == selectedTopic }
+        let picks = discovery.videos.isEmpty && discovery.lastUpdated == nil ? FocusRecommendations.videos : discovery.videos
+        let items = FocusRecommendations.mergeDuplicates(picks + account.freshVideos)
+        let filtered = selectedTopic == "All" ? items : items.filter { $0.allTopics.contains(selectedTopic) }
         let names = account.channels.filter { selectedIDs.contains($0.id) }.map(\.title)
         let preferred = FocusRecommendations.prioritize(filtered, selectedChannelNames: names, preferences: recommendationPreferences)
         return FocusRecommendations.sortByPublication(preferred, order: recommendationOrder, date: { $0.publishedAt })
@@ -403,6 +417,8 @@ struct FocusScreen: View {
                     if let date = discovery.lastUpdated {
                         Text("HackerTube updated \(date.formatted(date: .abbreviated, time: .shortened))")
                             .font(.caption).foregroundStyle(.secondary)
+                    } else if !discovery.videos.isEmpty {
+                        Text("HackerTube partial results").font(.caption).foregroundStyle(.secondary)
                     } else {
                         Text("HackerTube offline selection").font(.caption).foregroundStyle(.secondary)
                     }
@@ -447,7 +463,7 @@ struct FocusScreen: View {
                         HStack(alignment: .top, spacing: 4) {
                             Button { browser.open(video.url) } label: { recommendationRow(video) }.buttonStyle(.plain)
                             Menu {
-                                Button { updateRecommendationPreferences(message: "Saved. Use Recommended order to see the effect.", unchangedMessage: "This channel and topic are already prioritized as much as possible.") { $0.moreLike(video) } } label: {
+                                Button { updateRecommendationPreferences(message: "Saved. Use Recommended order to see the effect.", unchangedMessage: "This channel and topic are already prioritized as much as possible.") { $0.moreLike(video, topic: selectedTopic == "All" ? nil : selectedTopic) } } label: {
                                     Label("More like this", systemImage: "hand.thumbsup")
                                 }
                                 Button { updateRecommendationPreferences(message: "Video hidden from recommendations.") { $0.hide(video) } } label: {
@@ -649,6 +665,18 @@ struct FocusScreen: View {
     private var subscriptionPicker: some View {
         NavigationStack {
             List {
+                Section {
+                    Button("Clear selection", role: .destructive) {
+                        selectedChannelIDs = ""
+                        account.clearUploads()
+                    }
+                    .disabled(selectedIDs.isEmpty)
+                } footer: {
+                    Text("\(selectedIDs.count) of 30 selected. Clearing removes your choices in Focus Tube; it does not unsubscribe you on YouTube.")
+                    if !account.subscriptionsComplete {
+                        Text("The subscription list is incomplete, so some selected channels may not appear below.")
+                    }
+                }
                 Section("Choose up to 30 channels") {
                     ForEach(account.channels) { channel in
                         Button {

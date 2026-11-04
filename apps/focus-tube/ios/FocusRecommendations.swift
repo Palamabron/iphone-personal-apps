@@ -16,6 +16,13 @@ struct FocusRecommendation: Identifiable, Codable {
     // Neither is a guarantee of video quality or present-day accuracy.
     var shelfLife: String? = nil
     var hnRecommenders: Int? = nil
+    // Additional matching categories; optional to preserve older cached data.
+    var additionalTopics: [String]? = nil
+
+    var allTopics: [String] {
+        var seen = Set<String>()
+        return ([topic] + (additionalTopics ?? [])).filter { seen.insert($0).inserted }
+    }
 
     var url: URL { URL(string: "https://m.youtube.com/watch?v=" + id)! }
 }
@@ -54,11 +61,12 @@ struct FocusRankingPreferences: Codable, Equatable {
         else { try values.encodeNil(forKey: .maxAgeMonths) }
     }
 
-    mutating func moreLike(_ video: FocusRecommendation) {
+    mutating func moreLike(_ video: FocusRecommendation, topic selectedTopic: String? = nil) {
         let key = FocusRecommendations.channelNameKey(video.channel)
         if !key.isEmpty { channels[key] = min(3, max(0, channels[key] ?? 0) + 1) }
-        if FocusRecommendations.topics.contains(video.topic) {
-            topics[video.topic] = min(3, max(0, topics[video.topic] ?? 0) + 1)
+        let topic = selectedTopic.flatMap { video.allTopics.contains($0) ? $0 : nil } ?? video.topic
+        if FocusRecommendations.topics.contains(topic) {
+            topics[topic] = min(3, max(0, topics[topic] ?? 0) + 1)
         }
     }
 
@@ -74,8 +82,84 @@ struct FocusChannel: Identifiable {
     var query: String { name }
 }
 
+struct FocusDiscoveryResult {
+    let topic: String
+    // nil is a failed source; [] is a successful empty response.
+    let videos: [FocusRecommendation]?
+}
+
+// Optional fields let the previous cache format load without migration.
+struct FocusDiscoveryCache: Codable {
+    let videos: [FocusRecommendation]
+    let date: Date?
+    let partial: Bool?
+    let lastAttempt: Date?
+}
+
 enum FocusRecommendations {
     static let topics = ["AI & ML", "Science & math", "Computing", "Startups & economics"]
+
+    // A result can occur in multiple sources and topics. Keep one card, retain
+    // all its categories, and prefer the record with more useful metadata.
+    static func mergeDuplicates(_ videos: [FocusRecommendation]) -> [FocusRecommendation] {
+        var indices: [String: Int] = [:]
+        var merged: [FocusRecommendation] = []
+        func richness(_ video: FocusRecommendation) -> Int {
+            (video.publishedAt == nil ? 0 : 1) + (video.shelfLife == nil ? 0 : 2) + (video.hnRecommenders == nil ? 0 : 2)
+        }
+        for video in videos {
+            guard let index = indices[video.id] else {
+                indices[video.id] = merged.count
+                merged.append(video)
+                continue
+            }
+            let previous = merged[index]
+            var preferred = richness(video) > richness(previous) ? video : previous
+            let other = richness(video) > richness(previous) ? previous : video
+            preferred.publishedAt = preferred.publishedAt ?? other.publishedAt
+            preferred.shelfLife = preferred.shelfLife ?? other.shelfLife
+            preferred.hnRecommenders = preferred.hnRecommenders ?? other.hnRecommenders
+            var seen = Set<String>()
+            let primaryTopic = preferred.topic
+            preferred.additionalTopics = (previous.allTopics + video.allTopics)
+                .filter { $0 != primaryTopic && seen.insert($0).inserted }
+            merged[index] = preferred
+        }
+        return merged
+    }
+
+    static func mergeDiscovery(_ results: [FocusDiscoveryResult], previous: [FocusRecommendation], limit: Int = 96) -> (videos: [FocusRecommendation], partial: Bool) {
+        let limit = max(0, limit)
+        let failedTopics = Set(results.compactMap { result -> String? in
+            if case .none = result.videos { return result.topic }
+            return nil
+        })
+        var mixed: [FocusRecommendation] = []
+        let maxCount = results.map { $0.videos?.count ?? 0 }.max() ?? 0
+        for offset in 0..<maxCount {
+            for result in results {
+                if let videos = result.videos, offset < videos.count { mixed.append(videos[offset]) }
+            }
+        }
+        let fresh = mergeDuplicates(mixed)
+        guard !failedTopics.isEmpty else { return (Array(fresh.prefix(limit)), false) }
+        let prior = previous.filter { !failedTopics.isDisjoint(with: $0.allTopics) }
+        let combined = mergeDuplicates(fresh + prior)
+        let freshIDs = Set(fresh.map(\.id))
+        let newVideos = combined.filter { freshIDs.contains($0.id) }
+        let retained = combined.filter { !freshIDs.contains($0.id) }
+        // Keep space for prior results from failed topics while allowing fresh
+        // results to fill any unused capacity. Both pools remain finite.
+        let reserved = min(min(32, retained.count), limit)
+        let freshKept = Array(newVideos.prefix(limit - reserved))
+        let oldKept = Array(retained.prefix(limit - freshKept.count))
+        return (freshKept + oldKept, true)
+    }
+
+    static func needsDiscoveryRefresh(lastUpdated: Date?, lastAttempt: Date?, partial: Bool, now: Date) -> Bool {
+        guard let date = partial ? lastAttempt : lastUpdated, date <= now else { return true }
+        return now.timeIntervalSince(date) >= (partial ? 5 * 60 : 30 * 60)
+    }
 
     enum Order: String, CaseIterable, Identifiable {
         case recommended = "Recommended", newest = "Newest", oldest = "Oldest"
@@ -132,7 +216,7 @@ enum FocusRecommendations {
             let key = channelNameKey(original.channel)
             let selected = names.contains(key)
             let channelWeight = min(3, max(0, preferences.channels[key] ?? 0))
-            let topicWeight = min(3, max(0, preferences.topics[original.topic] ?? 0))
+            let topicWeight = original.allTopics.map { min(3, max(0, preferences.topics[$0] ?? 0)) }.max() ?? 0
             let recommenders = min(5, max(0, original.hnRecommenders ?? 0))
             let evergreen = original.shelfLife?.lowercased() == "evergreen" && recommenders >= 2
             let oldNews = original.shelfLife?.lowercased() == "news" && (ageDays ?? 0) > 365

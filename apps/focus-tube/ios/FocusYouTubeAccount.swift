@@ -44,6 +44,9 @@ final class FocusYouTubeAccount: NSObject, ObservableObject, ASWebAuthentication
     @Published private(set) var signedIn = false
     @Published private(set) var busy = false
     @Published private(set) var syncSucceeded = false
+    // A truncated or failed sync must never be used to discard saved selections.
+    @Published private(set) var subscriptionsComplete = false
+    @Published private(set) var subscriptionSyncRevision = 0
     @Published private(set) var signInSucceeded = false
     @Published private(set) var notice: String?
     /// Public, fixed-topic YouTube searches; never derived from private account data.
@@ -181,6 +184,7 @@ final class FocusYouTubeAccount: NSObject, ObservableObject, ASWebAuthentication
         let title: String
         let channel: String
         let topic: String
+        var additionalTopics: [String] = []
     }
     private struct FreshSearchBatch: Sendable {
         let items: [FreshCandidate]?
@@ -195,6 +199,9 @@ final class FocusYouTubeAccount: NSObject, ObservableObject, ASWebAuthentication
     private var credentials: Credentials?
     private var generation = 0
     private var uploadsGeneration = 0
+    // A selection made while another account operation is active must not be lost.
+    // Keep only the most recent selection; an empty selection clears it immediately.
+    private var pendingUploadSelection: [Channel]?
     private let noRedirect = NoRedirect()
     private lazy var network: URLSession = {
         #if FOCUS_ACCOUNT_TESTING
@@ -314,7 +321,7 @@ final class FocusYouTubeAccount: NSObject, ObservableObject, ASWebAuthentication
         busy = true; freshLoading = true
         FocusDiagnostics.shared.record(.freshSearchStarted)
         let requestGeneration = generation
-        defer { busy = false; freshLoading = false }
+        defer { freshLoading = false; finishOperation() }
         do {
             let token = try await accessToken()
             guard requestGeneration == generation else { return }
@@ -361,11 +368,18 @@ final class FocusYouTubeAccount: NSObject, ObservableObject, ASWebAuthentication
             let searchFailureCode = results.compactMap(\.failure).first
             let lists = results.map { $0.items ?? [] }
             var candidates: [FreshCandidate] = []
-            var seen = Set<String>()
+            var candidateIndices: [String: Int] = [:]
             for offset in 0..<25 {
                 for list in lists where offset < list.count {
                     let item = list[offset]
-                    if seen.insert(item.id).inserted { candidates.append(item) }
+                    if let index = candidateIndices[item.id] {
+                        if candidates[index].topic != item.topic && !candidates[index].additionalTopics.contains(item.topic) {
+                            candidates[index].additionalTopics.append(item.topic)
+                        }
+                    } else {
+                        candidateIndices[item.id] = candidates.count
+                        candidates.append(item)
+                    }
                 }
             }
             let batches = stride(from: 0, to: candidates.count, by: 50).map { start in
@@ -413,7 +427,8 @@ final class FocusYouTubeAccount: NSObject, ObservableObject, ASWebAuthentication
                 guard (perChannel[channel] ?? 0) < 3 else { return nil }
                 perChannel[channel, default: 0] += 1
                 return FocusRecommendation(id: item.id, title: item.title, channel: item.channel,
-                    topic: item.topic, reason: "Recent YouTube search result", publishedAt: date)
+                    topic: item.topic, reason: "Recent YouTube search result", publishedAt: date,
+                    additionalTopics: item.additionalTopics)
             }
             guard !found.isEmpty else {
                 if failures > 0 {
@@ -450,7 +465,7 @@ final class FocusYouTubeAccount: NSObject, ObservableObject, ASWebAuthentication
         busy = true; notice = nil
         FocusDiagnostics.shared.record(.signInStarted)
         let requestGeneration = generation
-        defer { busy = false }
+        defer { finishOperation() }
         do {
             let verifier = try randomURLSafe(bytes: 32)
             let state = try randomURLSafe(bytes: 32)
@@ -483,7 +498,7 @@ final class FocusYouTubeAccount: NSObject, ObservableObject, ASWebAuthentication
             let stored = Credentials(clientID: client, accessToken: token.access_token, refreshToken: token.refresh_token,
                                      expiresAt: Date().addingTimeInterval(max(0, token.expires_in - 60)))
             try writeCredentials(stored)
-            credentials = stored; signedIn = true; syncSucceeded = false; signInSucceeded = true; lastSyncedAt = nil; clearRefreshFailure()
+            credentials = stored; signedIn = true; syncSucceeded = false; subscriptionsComplete = false; signInSucceeded = true; lastSyncedAt = nil; clearRefreshFailure()
             FocusDiagnostics.shared.record(.signInSucceeded)
             channels = []; uploads = []; connectedChannel = nil
             let previousFresh = freshCacheStore.data(forKey: freshCacheKey).flatMap { try? JSONDecoder().decode(FreshCache.self, from: $0) }
@@ -498,10 +513,10 @@ final class FocusYouTubeAccount: NSObject, ObservableObject, ASWebAuthentication
 
     func sync() async {
         guard !busy else { return }
-        busy = true; notice = nil; syncSucceeded = false
+        busy = true; notice = nil; syncSucceeded = false; subscriptionsComplete = false
         FocusDiagnostics.shared.record(.subscriptionSyncStarted)
         let requestGeneration = generation
-        defer { busy = false }
+        defer { finishOperation() }
         do {
             let token = try await accessToken()
             let own: OwnChannelResponse? = try? await api("channels", query: [.init(name: "part", value: "snippet"), .init(name: "mine", value: "true"), .init(name: "maxResults", value: "1")], token: token)
@@ -528,7 +543,9 @@ final class FocusYouTubeAccount: NSObject, ObservableObject, ASWebAuthentication
             guard requestGeneration == generation else { return }
             channels = all
             connectedChannel = own?.items.first.map { String($0.snippet.title.prefix(200)) }
+            subscriptionsComplete = next == nil
             syncSucceeded = true; lastSyncedAt = now
+            subscriptionSyncRevision += 1
             FocusDiagnostics.shared.record(.subscriptionSyncSucceeded)
             notice = next == nil ? "Subscriptions updated. Choose channels to load recent uploads." : "Showing the first 1,000 subscriptions."
         } catch { if requestGeneration == generation { FocusDiagnostics.shared.record(.subscriptionSyncFailed, code: Self.diagnosticCode(error)); recordRefreshFailure(); notice = (error as? LocalizedError)?.errorDescription ?? "Could not load subscriptions." } }
@@ -545,15 +562,41 @@ final class FocusYouTubeAccount: NSObject, ObservableObject, ASWebAuthentication
         return syncSucceeded
     }
 
+    // Keep stale IDs until the entire subscription list is known. Partial
+    // results and errors cannot establish that a channel was unsubscribed.
+    static func retainedSelectedIDs(_ ids: Set<String>, channels: [Channel], complete: Bool) -> Set<String> {
+        guard complete else { return ids }
+        return ids.intersection(Set(channels.map(\.id)))
+    }
+
+    /// Release the serialized account operation and, if necessary, load the latest
+    /// selection. The deferred task rechecks state so sign-out and newer choices win.
+    private func finishOperation() {
+        busy = false
+        guard pendingUploadSelection != nil else { return }
+        Task { [weak self] in
+            guard let self, self.signedIn, !self.busy, let selected = self.pendingUploadSelection else { return }
+            self.pendingUploadSelection = nil
+            await self.loadUploads(for: selected)
+        }
+    }
+
     /// Explicit selection bounds requests and avoids presenting every subscription as a recommendation.
     func loadUploads(for selected: [Channel]) async {
-        guard !busy else { return }
-        guard !selected.isEmpty else { notice = "Choose at least one channel."; return }
+        guard signedIn else { return }
+        guard !selected.isEmpty else { clearUploads(); notice = "Choose at least one channel."; return }
+        guard !busy else {
+            uploadsGeneration += 1
+            pendingUploadSelection = selected
+            notice = "Selected channels will load after the current account request."
+            return
+        }
+        pendingUploadSelection = nil
         busy = true; notice = nil
         FocusDiagnostics.shared.record(.uploadLoadStarted)
         let requestGeneration = generation
         let currentUploadsGeneration = uploadsGeneration
-        defer { busy = false }
+        defer { finishOperation() }
         do {
             let token = try await accessToken()
             let unique = Array(Set(selected.map(\.id))).filter(Self.validChannelID).sorted()
@@ -585,7 +628,7 @@ final class FocusYouTubeAccount: NSObject, ObservableObject, ASWebAuthentication
             var publicationDates: [String: Date] = [:]
             for start in stride(from: 0, to: first.count, by: 50) {
                 let batch = first[start..<min(start + 50, first.count)]
-                let details: VideosResponse = try await api("videos", query: [.init(name: "part", value: "contentDetails,snippet"), .init(name: "id", value: batch.map(\.id).joined(separator: ",")), .init(name: "maxResults", value: "50")], token: token)
+                let details: VideosResponse = try await api("videos", query: [.init(name: "part", value: "contentDetails,snippet"), .init(name: "id", value: batch.map(\.id).joined(separator: ","))], token: token)
                 guard requestGeneration == generation, currentUploadsGeneration == uploadsGeneration else { return }
                 for item in details.items where item.snippet.liveBroadcastContent == "none" {
                     durations[item.id] = Self.durationSeconds(item.contentDetails.duration)
@@ -607,16 +650,18 @@ final class FocusYouTubeAccount: NSObject, ObservableObject, ASWebAuthentication
 
     func clearUploads() {
         uploadsGeneration += 1
+        pendingUploadSelection = nil
         uploads = []
         clearRefreshFailure()
     }
 
     func signOut() {
         generation += 1
+        pendingUploadSelection = nil
         session?.cancel(); session = nil
         freshSearchWork?.cancel(); freshSearchWork = nil
         freshMetadataWork?.cancel(); freshMetadataWork = nil
-        credentials = nil; signedIn = false; syncSucceeded = false; signInSucceeded = false; connectedChannel = nil; channels = []; uploads = []; lastSyncedAt = nil; clearRefreshFailure()
+        credentials = nil; signedIn = false; syncSucceeded = false; subscriptionsComplete = false; signInSucceeded = false; connectedChannel = nil; channels = []; uploads = []; lastSyncedAt = nil; clearRefreshFailure()
         freshVideos = []; freshLastUpdated = nil; freshNotice = nil
         freshCacheStore.removeObject(forKey: freshCacheKey)
         freshCacheStore.removeObject(forKey: freshAttemptKey)

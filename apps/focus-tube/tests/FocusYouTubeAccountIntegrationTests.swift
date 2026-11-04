@@ -143,6 +143,7 @@ private func testFreshYouTubeDiscovery() async throws {
     try check(account.freshNotice == nil, "Successful sign-in must clear the stale connect notice")
     await account.refreshFreshVideosIfNeeded()
     try check(account.freshVideos.map(\.id) == ["aaaaaaaaaaa", "eeeeeeeeeee"], "Discovery must deduplicate and exclude short, old and live videos")
+    try check(account.freshVideos.allSatisfy { Set($0.allTopics) == Set(FocusRecommendations.topics) }, "A video returned by several searches must retain every matching topic")
     try check(account.freshVideos.allSatisfy { $0.publishedAt != nil && $0.reason == "Recent YouTube search result" }, "Discovery must report actual dates and its source")
     let searches = MockURLProtocol.requests().filter { $0.url?.path == "/youtube/v3/search" }
     try check(searches.count == 4, "Only four bounded topic searches are allowed")
@@ -437,6 +438,8 @@ private func testPaginationAndUploads() async throws {
             return Reply(status: 200, json: "{\"items\":[\(items)]}")
         }
         if path == "/youtube/v3/videos" {
+            // YouTube videos.list does not support maxResults when id is present.
+            if query(request, "id") != nil && query(request, "maxResults") != nil { return Reply(status: 400, json: "{}") }
             return Reply(status: 200, json: #"{"items":[{"id":"aaaaaaaaaaa","contentDetails":{"duration":"PT180S"},"snippet":{"liveBroadcastContent":"none","publishedAt":"2026-01-03T12:00:00Z"}},{"id":"bbbbbbbbbbb","contentDetails":{"duration":"PT181S"},"snippet":{"liveBroadcastContent":"none","publishedAt":"2026-01-01T12:00:00.000Z"}},{"id":"ccccccccccc","contentDetails":{"duration":"P1DT1H"},"snippet":{"liveBroadcastContent":"none","publishedAt":"2026-01-04T12:00:00Z"}}]}"#)
         }
         return Reply(status: 500, json: "{}")
@@ -459,6 +462,8 @@ private func testPaginationAndUploads() async throws {
     try check(!skipped && MockURLProtocol.requests().filter { $0.url?.path == "/youtube/v3/subscriptions" }.count == 2, "Foreground refresh must not repeat a recent sync")
     await account.loadUploads(for: [account.channels[0]])
     try check(account.uploads.map(\.id) == ["ccccccccccc", "bbbbbbbbbbb"], "Uploads must sort by video publication rather than playlist addition date and exclude the three-minute item")
+    let videoRequests = MockURLProtocol.requests().filter { $0.url?.path == "/youtube/v3/videos" }
+    try check(!videoRequests.isEmpty && videoRequests.allSatisfy { query($0, "id") != nil && query($0, "maxResults") == nil }, "Video metadata requests with IDs must not send maxResults")
     let playlistRequest = MockURLProtocol.requests().first { $0.url?.path == "/youtube/v3/playlistItems" }
     try check(URLComponents(url: playlistRequest!.url!, resolvingAgainstBaseURL: false)?.queryItems?.contains(URLQueryItem(name: "maxResults", value: "20")) == true, "Fetch enough playlist items to allow for Shorts")
     let restored = bed.makeAccount()
@@ -630,6 +635,119 @@ private func testSignOutDuringRequest() async throws {
 }
 
 @MainActor
+private func testLatestUploadSelectionWhileBusy() async throws {
+    let first = FocusYouTubeAccount.Channel(id: a, title: "A")
+    let latest = FocusYouTubeAccount.Channel(id: b, title: "B")
+    func configure() {
+        MockURLProtocol.configure { request in
+            switch request.url?.path {
+            case "/token": return Reply(status: 200, json: tokenResponse)
+            case "/youtube/v3/channels":
+                if query(request, "mine") == "true" { return Reply(status: 200, json: ownResponse, delay: 0.2) }
+                let id = query(request, "id") ?? ""
+                let playlist = id == b ? "UUb" : "UUa"
+                return Reply(status: 200, json: "{\"items\":[{\"id\":\"\(id)\",\"contentDetails\":{\"relatedPlaylists\":{\"uploads\":\"\(playlist)\"}}}]}")
+            case "/youtube/v3/subscriptions": return Reply(status: 200, json: #"{"items":[]}"#)
+            case "/youtube/v3/playlistItems":
+                let isLatest = query(request, "playlistId") == "UUb"
+                let id = isLatest ? "bbbbbbbbbbb" : "aaaaaaaaaaa"
+                return Reply(status: 200, json: "{\"items\":[{\"snippet\":{\"title\":\"Video\",\"channelTitle\":\"Channel\",\"publishedAt\":\"2026-01-01T12:00:00Z\",\"resourceId\":{\"videoId\":\"\(id)\"}}}]}", delay: isLatest ? 0 : 0.2)
+            case "/youtube/v3/videos":
+                let id = query(request, "id") ?? ""
+                return Reply(status: 200, json: "{\"items\":[{\"id\":\"\(id)\",\"contentDetails\":{\"duration\":\"PT600S\"},\"snippet\":{\"liveBroadcastContent\":\"none\",\"publishedAt\":\"2026-01-01T12:00:00Z\"}}]}")
+            default: return Reply(status: 500, json: "{}")
+            }
+        }
+    }
+    func waitFor(_ condition: @MainActor () -> Bool) async throws {
+        for _ in 0..<300 {
+            if condition() { return }
+            try await Task.sleep(nanoseconds: 10_000_000)
+        }
+        throw TestFailure(description: "Timed out waiting for queued uploads")
+    }
+
+    // An automatic sync can be busy when the user finishes choosing channels.
+    // Only the latest of multiple choices should subsequently be fetched.
+    let bed = TestBed(); configure()
+    let account = bed.makeAccount(); await account.signIn()
+    let syncing = Task { await account.sync() }
+    try await waitFor { MockURLProtocol.requests().contains { $0.url?.path == "/youtube/v3/channels" && query($0, "mine") == "true" } }
+    await account.loadUploads(for: [first]); await account.loadUploads(for: [latest])
+    await syncing.value
+    try await waitFor { !account.busy && account.uploads.map(\.id) == ["bbbbbbbbbbb"] }
+    let selectedRequests = MockURLProtocol.requests().filter { $0.url?.path == "/youtube/v3/channels" && query($0, "id") != nil }
+    try check(selectedRequests.count == 1 && query(selectedRequests[0], "id") == b, "Only the latest queued selection may be fetched")
+
+    // A later selection also invalidates a load already in flight.
+    let bed2 = TestBed(); configure()
+    let account2 = bed2.makeAccount(); await account2.signIn()
+    let oldLoad = Task { await account2.loadUploads(for: [first]) }
+    try await waitFor { MockURLProtocol.requests().contains { $0.url?.path == "/youtube/v3/playlistItems" && query($0, "playlistId") == "UUa" } }
+    await account2.loadUploads(for: [latest]); await oldLoad.value
+    try await waitFor { !account2.busy && account2.uploads.map(\.id) == ["bbbbbbbbbbb"] }
+    try check(!MockURLProtocol.requests().contains { $0.url?.path == "/youtube/v3/videos" && query($0, "id") == "aaaaaaaaaaa" }, "An obsolete upload load must not request metadata after a newer choice")
+
+    // Signing out while a selection waits must not initiate any later upload request.
+    let bed3 = TestBed(); configure()
+    let account3 = bed3.makeAccount(); await account3.signIn()
+    let pendingSync = Task { await account3.sync() }
+    try await waitFor { MockURLProtocol.requests().contains { $0.url?.path == "/youtube/v3/channels" && query($0, "mine") == "true" } }
+    await account3.loadUploads(for: [latest]); account3.signOut(); await pendingSync.value
+    await Task.yield()
+    try check(!account3.signedIn && account3.uploads.isEmpty, "Signing out must discard the queued selection")
+    try check(!MockURLProtocol.requests().contains { $0.url?.path == "/youtube/v3/channels" && query($0, "id") != nil }, "Signing out must not start queued upload requests")
+
+    // Clearing the selection while a request is running must not resurrect it.
+    let bed4 = TestBed(); configure()
+    let account4 = bed4.makeAccount(); await account4.signIn()
+    let clearingSync = Task { await account4.sync() }
+    try await waitFor { MockURLProtocol.requests().contains { $0.url?.path == "/youtube/v3/channels" && query($0, "mine") == "true" } }
+    await account4.loadUploads(for: [latest]); account4.clearUploads(); await clearingSync.value
+    await Task.yield()
+    try check(account4.uploads.isEmpty && !MockURLProtocol.requests().contains { $0.url?.path == "/youtube/v3/channels" && query($0, "id") != nil }, "Clearing must discard queued uploads")
+}
+
+@MainActor
+private func testSelectionReconciliationRequiresCompleteSync() async throws {
+    let bed = TestBed()
+    let account = bed.makeAccount()
+    let original: Set<String> = [a, b]
+    func configure(_ mode: String) {
+        MockURLProtocol.configure { request in
+            if request.url?.path == "/token" { return Reply(status: 200, json: tokenResponse) }
+            if request.url?.path == "/youtube/v3/channels" { return Reply(status: 200, json: ownResponse) }
+            if request.url?.path == "/youtube/v3/subscriptions" {
+                if mode == "failure" { return Reply(status: 500, json: "{}") }
+                let id = mode == "complete" ? b : a
+                let next: String
+                if mode == "partial" {
+                    let current = Int(query(request, "pageToken") ?? "0") ?? 0
+                    next = ",\"nextPageToken\":\"\(current + 1)\""
+                } else { next = "" }
+                return Reply(status: 200, json: "{\"items\":[{\"snippet\":{\"title\":\"Channel\",\"resourceId\":{\"channelId\":\"\(id)\"}}}]\(next)}")
+            }
+            return Reply(status: 500, json: "{}")
+        }
+    }
+    configure("partial"); await account.signIn(); await account.sync()
+    try check(account.syncSucceeded && !account.subscriptionsComplete, "A page-limited sync must be marked incomplete")
+    let firstRevision = account.subscriptionSyncRevision
+    try check(FocusYouTubeAccount.retainedSelectedIDs(original, channels: account.channels, complete: account.syncSucceeded && account.subscriptionsComplete) == original, "Partial results must preserve all selected IDs")
+
+    configure("failure"); await account.sync()
+    try check(!account.syncSucceeded && !account.subscriptionsComplete, "A failed sync must not be treated as complete")
+    try check(account.subscriptionSyncRevision == firstRevision, "Failed sync must not signal a completed result")
+    try check(FocusYouTubeAccount.retainedSelectedIDs(original, channels: account.channels, complete: account.syncSucceeded && account.subscriptionsComplete) == original, "A failed sync must preserve all selected IDs")
+
+    configure("complete"); await account.sync()
+    try check(account.syncSucceeded && account.subscriptionsComplete, "A fully paginated sync must be marked complete")
+    try check(account.subscriptionSyncRevision == firstRevision + 1, "Each successful sync must produce a distinct reconciliation signal")
+    try check(FocusYouTubeAccount.retainedSelectedIDs(original, channels: account.channels, complete: account.syncSucceeded && account.subscriptionsComplete) == Set([b]), "Only IDs missing from a complete sync should be removed")
+    try check(FocusYouTubeAccount.retainedSelectedIDs(Set([a]), channels: account.channels, complete: true).isEmpty, "A previous account's unavailable IDs must not occupy selection slots")
+}
+
+@MainActor
 private func testSignOutDuringAuthorization() async throws {
     let bed = TestBed(); bed.mode = .slowGood
     MockURLProtocol.configure { _ in Reply(status: 200, json: tokenResponse) }
@@ -690,6 +808,8 @@ struct AccountIntegrationTestApp: App {
                     try await testExpiredToken()
                     try await testRefreshTokenSuccess()
                     try await testSignOutDuringRequest()
+                    try await testLatestUploadSelectionWhileBusy()
+                    try await testSelectionReconciliationRequiresCompleteSync()
                     try await testSignOutDuringAuthorization()
                     try await testRedirectDelegate()
                     try await testNoBearerTokenOnRedirect()
