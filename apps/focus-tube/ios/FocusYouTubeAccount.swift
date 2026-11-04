@@ -13,6 +13,7 @@ struct FocusAccountTestHooks {
     let configuration: URLSessionConfiguration
     let authenticate: (URL, String) async throws -> URL
     let observeTokenRequest: (URLRequest) -> Void
+    let now: () -> Date
     let read: () throws -> Data?
     let write: (Data) throws -> Void
     let delete: () -> Void
@@ -45,6 +46,14 @@ final class FocusYouTubeAccount: NSObject, ObservableObject, ASWebAuthentication
     @Published private(set) var signInSucceeded = false
     @Published private(set) var notice: String?
     private var lastSyncedAt: Date?
+    private var lastRefreshFailureAt: Date?
+
+    private var now: Date {
+        #if FOCUS_ACCOUNT_TESTING
+        if let clock = testHooks?.now { return clock() }
+        #endif
+        return Date()
+    }
 
     private struct Credentials: Codable {
         let clientID: String
@@ -210,7 +219,7 @@ final class FocusYouTubeAccount: NSObject, ObservableObject, ASWebAuthentication
             let stored = Credentials(clientID: client, accessToken: token.access_token, refreshToken: token.refresh_token,
                                      expiresAt: Date().addingTimeInterval(max(0, token.expires_in - 60)))
             try writeCredentials(stored)
-            credentials = stored; signedIn = true; syncSucceeded = false; signInSucceeded = true; lastSyncedAt = nil
+            credentials = stored; signedIn = true; syncSucceeded = false; signInSucceeded = true; lastSyncedAt = nil; lastRefreshFailureAt = nil
             channels = []; uploads = []; connectedChannel = nil
             notice = token.refresh_token == nil ? "Connected, but Google did not provide a refresh token. You may need to sign in again. Playback sign-in is separate." : "Connected to the YouTube Data API. Playback sign-in is separate."
         } catch {
@@ -250,15 +259,17 @@ final class FocusYouTubeAccount: NSObject, ObservableObject, ASWebAuthentication
             guard requestGeneration == generation else { return }
             channels = all
             connectedChannel = own?.items.first.map { String($0.snippet.title.prefix(200)) }
-            syncSucceeded = true; lastSyncedAt = Date()
+            syncSucceeded = true; lastSyncedAt = now; lastRefreshFailureAt = nil
             notice = next == nil ? "Subscriptions updated. Choose channels to load recent uploads." : "Showing the first 1,000 subscriptions."
-        } catch { if requestGeneration == generation { notice = (error as? LocalizedError)?.errorDescription ?? "Could not load subscriptions." } }
+        } catch { if requestGeneration == generation { lastRefreshFailureAt = now; notice = (error as? LocalizedError)?.errorDescription ?? "Could not load subscriptions." } }
     }
 
     // Returning to the app repeatedly should not consume API quota each time.
     func syncIfNeeded() async -> Bool {
         guard signedIn, !busy else { return false }
-        if let date = lastSyncedAt, Date().timeIntervalSince(date) < 30 * 60 { return false }
+        if let date = lastRefreshFailureAt {
+            if now.timeIntervalSince(date) < 5 * 60 { return false }
+        } else if let date = lastSyncedAt, now.timeIntervalSince(date) < 30 * 60 { return false }
         await sync()
         return syncSucceeded
     }
@@ -316,8 +327,9 @@ final class FocusYouTubeAccount: NSObject, ObservableObject, ASWebAuthentication
                 return Upload(id: candidate.id, title: candidate.title, channel: candidate.channel, publishedAt: publicationDates[candidate.id])
             }
             uploads = Array(FocusRecommendations.sortByPublication(published, order: .newest, date: { $0.publishedAt }).prefix(60))
+            lastRefreshFailureAt = failed > 0 ? now : nil
             notice = unique.count > 30 ? "Showing uploads from the first 30 selected channels." : (failed > 0 ? "Some channels could not be refreshed." : (uploads.isEmpty ? "No eligible recent videos were found." : nil))
-        } catch { if requestGeneration == generation, currentUploadsGeneration == uploadsGeneration { notice = (error as? LocalizedError)?.errorDescription ?? "Could not load uploads." } }
+        } catch { if requestGeneration == generation, currentUploadsGeneration == uploadsGeneration { lastRefreshFailureAt = now; notice = (error as? LocalizedError)?.errorDescription ?? "Could not load uploads." } }
     }
 
     func clearUploads() {
@@ -328,7 +340,7 @@ final class FocusYouTubeAccount: NSObject, ObservableObject, ASWebAuthentication
     func signOut() {
         generation += 1
         session?.cancel(); session = nil
-        credentials = nil; signedIn = false; syncSucceeded = false; signInSucceeded = false; connectedChannel = nil; channels = []; uploads = []; lastSyncedAt = nil
+        credentials = nil; signedIn = false; syncSucceeded = false; signInSucceeded = false; connectedChannel = nil; channels = []; uploads = []; lastSyncedAt = nil; lastRefreshFailureAt = nil
         deleteCredentials()
         notice = "Local API credentials removed. Playback sign-in is separate."
     }

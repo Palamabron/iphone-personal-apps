@@ -198,7 +198,7 @@ struct FocusScreen: View {
                 if await account.syncIfNeeded() { await loadSelectedUploads() }
                 await discovery.refreshIfNeeded()
                 while !Task.isCancelled {
-                    try? await Task.sleep(nanoseconds: 1_800_000_000_000)
+                    try? await Task.sleep(nanoseconds: 300_000_000_000)
                     guard !Task.isCancelled else { break }
                     if scenePhase == .active {
                         await discovery.refreshIfNeeded()
