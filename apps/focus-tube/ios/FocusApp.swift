@@ -3,10 +3,12 @@ import WebKit
 import UIKit
 
 private enum FocusTheme {
-    static let background = Color(red: 0.07, green: 0.14, blue: 0.11)
-    static let accent = Color(red: 0.84, green: 0.95, blue: 0.61)
-    static let surface = Color.white.opacity(0.08)
-    static let corner: CGFloat = 16
+    static let background = Color(red: 0.035, green: 0.055, blue: 0.050)
+    static let accent = Color(red: 0.81, green: 0.92, blue: 0.65)
+    static let surface = Color(red: 0.095, green: 0.125, blue: 0.113)
+    static let elevated = Color(red: 0.13, green: 0.16, blue: 0.145)
+    static let border = Color.white.opacity(0.09)
+    static let corner: CGFloat = 18
 }
 
 @main
@@ -51,7 +53,7 @@ final class FocusBrowser: NSObject, ObservableObject, WKNavigationDelegate, WKUI
         webView.uiDelegate = self
         webView.allowsBackForwardNavigationGestures = true
         webView.isOpaque = false
-        webView.backgroundColor = UIColor(red: 0.07, green: 0.14, blue: 0.11, alpha: 1)
+        webView.backgroundColor = UIColor(red: 0.035, green: 0.055, blue: 0.050, alpha: 1)
         saved = (UserDefaults.standard.data(forKey: "focus.saved.v1").flatMap { try? JSONDecoder().decode([SavedFilm].self, from: $0) } ?? []).filter { URL(string: $0.url).map { FocusPolicy.isYouTube($0) && !FocusPolicy.isShorts($0) } ?? false }
         observations.append(webView.observe(\.canGoBack, options: [.new]) { [weak self] _, change in
             DispatchQueue.main.async { self?.canGoBack = change.newValue ?? false }
@@ -152,6 +154,7 @@ struct FocusScreen: View {
     @State private var input = ""
     @State private var showInfo = false
     @State private var selectedTopic = "All"
+    @State private var recommendationLimit = 15
     @StateObject private var discovery = FocusDiscovery()
     @StateObject private var account = FocusYouTubeAccount()
     @AppStorage("focus.subscriptionSelection.v1") private var selectedChannelIDs = ""
@@ -244,39 +247,43 @@ struct FocusScreen: View {
 
     private var startScreen: some View {
         ScrollView {
-            LazyVStack(alignment: .leading, spacing: 24) {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("FOCUS TUBE").font(.caption.weight(.bold)).tracking(1.4).foregroundStyle(FocusTheme.accent)
-                    Text("What would you like to watch?").font(.largeTitle.weight(.bold)).fixedSize(horizontal: false, vertical: true)
-                    Text("Search YouTube or choose a video below.").foregroundStyle(.secondary)
-                }.padding(.top, 12)
-
-                VStack(spacing: 10) {
-                    HStack(spacing: 12) {
-                        Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
-                        TextField("Search or paste a video link", text: $input)
-                            .textInputAutocapitalization(.never).autocorrectionDisabled().submitLabel(.search).focused($typing).onSubmit(search)
-                    }.padding(16).background(FocusTheme.surface, in: RoundedRectangle(cornerRadius: FocusTheme.corner))
-                    Button(action: search) { Text("Search YouTube").fontWeight(.semibold).frame(maxWidth: .infinity).padding(.vertical, 8) }
-                        .buttonStyle(.borderedProminent).disabled(input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                }
+            LazyVStack(alignment: .leading, spacing: 28) {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Discover").font(.title2.weight(.bold))
+                    Text("Search, subscriptions, and selected videos.").font(.subheadline).foregroundStyle(.secondary)
+                }.padding(.top, 8)
 
                 HStack(spacing: 10) {
-                    Button { browser.open(URL(string: "https://m.youtube.com/feed/subscriptions")!) } label: {
-                        Label("Subscriptions", systemImage: "rectangle.stack").frame(maxWidth: .infinity).padding(.vertical, 8)
-                    }
-                    Button { browser.open(URL(string: "https://m.youtube.com/channel_switcher")!) } label: {
-                        Label("Account", systemImage: "person.crop.circle").frame(maxWidth: .infinity).padding(.vertical, 8)
-                    }
-                }.buttonStyle(.bordered).font(.subheadline.weight(.medium))
+                    Image(systemName: "magnifyingglass").foregroundStyle(.secondary).accessibilityHidden(true)
+                    TextField("Search or paste a video link", text: $input)
+                        .textInputAutocapitalization(.never).autocorrectionDisabled().submitLabel(.search).focused($typing).onSubmit(search).accessibilityLabel("Search YouTube or paste a video link")
+                    Button(action: search) { Image(systemName: "arrow.up").fontWeight(.semibold).frame(width: 44, height: 44) }
+                        .buttonStyle(.borderedProminent).tint(FocusTheme.accent)
+                        .accessibilityLabel("Search YouTube")
+                        .disabled(input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                }
+                .padding(.leading, 16).padding(.trailing, 6).padding(.vertical, 6)
+                .background(FocusTheme.surface, in: RoundedRectangle(cornerRadius: FocusTheme.corner))
+
+                ViewThatFits(in: .horizontal) {
+                    quickLinks
+                    VStack(spacing: 10) { subscriptionsLink; accountLink }
+                }
 
                 VStack(alignment: .leading, spacing: 12) {
-                    Text("Your channels").font(.title2.bold())
-                    Text("Choose subscribed channels for recent uploads. Google account access for playback is separate.").font(.subheadline).foregroundStyle(.secondary)
+                    HStack(alignment: .top, spacing: 12) {
+                        Image(systemName: "person.2.fill")
+                            .font(.subheadline.weight(.semibold)).foregroundStyle(FocusTheme.accent)
+                            .frame(width: 38, height: 38).background(FocusTheme.elevated, in: RoundedRectangle(cornerRadius: 11)).accessibilityHidden(true)
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Your channels").font(.headline)
+                            Text("Recent uploads from the channels you choose.").font(.subheadline).foregroundStyle(.secondary)
+                        }
+                    }
                     if !account.configured {
-                        Text("Subscription sync needs an iOS Google OAuth client configured for this app.").font(.caption).foregroundStyle(.secondary)
+                        Text("Subscription sync is not configured on this build.").font(.caption).foregroundStyle(.secondary)
                     } else if !account.signedIn {
-                        Button("Connect subscriptions") { Task { await account.signIn(); if account.signInSucceeded { await account.sync() } } }.buttonStyle(.bordered)
+                        Button("Connect with Google") { Task { await account.signIn(); if account.signInSucceeded { await account.sync() } } }.buttonStyle(.bordered)
                     } else {
                         if let channel = account.connectedChannel { Text("Connected channel: \(channel)").font(.caption).foregroundStyle(.secondary) }
                         if !account.hasRefreshToken { Text("Google did not provide a refresh token. You may need to reconnect when this session expires.").font(.caption).foregroundStyle(.secondary) }
@@ -294,6 +301,58 @@ struct FocusScreen: View {
                         Button("Reconnect Google account") { Task { await account.signIn(); if account.signInSucceeded { await account.sync(); if account.syncSucceeded { await loadSelectedUploads() } } } }.font(.footnote).disabled(account.busy)
                     }
                     if let notice = account.notice { Text(notice).font(.caption).foregroundStyle(.secondary) }
+                    Text("Playback uses a separate YouTube sign-in.").font(.caption).foregroundStyle(.secondary)
+                }
+                .padding(16).frame(maxWidth: .infinity, alignment: .leading)
+                .background(FocusTheme.surface, in: RoundedRectangle(cornerRadius: FocusTheme.corner))
+                .overlay(RoundedRectangle(cornerRadius: FocusTheme.corner).stroke(FocusTheme.border))
+
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack(alignment: .firstTextBaseline) {
+                        Text("Selected videos").font(.title2.bold())
+                        Spacer()
+                        if discovery.loading { ProgressView().controlSize(.small) }
+                        else {
+                            Button { Task { await discovery.refresh() } } label: { Image(systemName: "arrow.clockwise").frame(width: 44, height: 44) }
+                                .accessibilityLabel("Refresh recommendations")
+                        }
+                    }
+                    Text("HackerTube recommendations. Matching channel names from your selection appear first.")
+                        .font(.subheadline).foregroundStyle(.secondary)
+                    if let date = discovery.lastUpdated {
+                        Text("Updated \(date.formatted(date: .abbreviated, time: .shortened)) · \(visibleVideos.count) videos")
+                            .font(.caption).foregroundStyle(.secondary)
+                    } else {
+                        Text("Offline selection · \(visibleVideos.count) videos").font(.caption).foregroundStyle(.secondary)
+                    }
+                    if let notice = discovery.notice { Text(notice).font(.caption).foregroundStyle(.secondary) }
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 8) {
+                            ForEach(topics, id: \.self) { topic in
+                                Button { selectedTopic = topic; recommendationLimit = 15 } label: {
+                                    Text(topic).font(.subheadline.weight(.medium)).padding(.horizontal, 14).padding(.vertical, 9)
+                                        .frame(minHeight: 44)
+                                        .foregroundStyle(selectedTopic == topic ? FocusTheme.background : Color.primary)
+                                        .background(selectedTopic == topic ? FocusTheme.accent : FocusTheme.surface, in: Capsule())
+                                }.buttonStyle(.plain).accessibilityAddTraits(selectedTopic == topic ? .isSelected : [])
+                            }
+                        }
+                    }
+                    ForEach(Array(visibleVideos.prefix(recommendationLimit))) { video in
+                        Button { browser.open(video.url) } label: { recommendationRow(video) }.buttonStyle(.plain)
+                    }
+                    if visibleVideos.count > recommendationLimit {
+                        Button("Show 15 more") { recommendationLimit += 15 }
+                            .buttonStyle(.bordered).controlSize(.large)
+                    }
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Selections from HackerTube, based on open-index/hacker-news. Data: ODC-By 1.0.")
+                        HStack {
+                            Link("HackerTube", destination: URL(string: "https://hackertube.org/data")!)
+                            Link("Hacker News dataset", destination: URL(string: "https://huggingface.co/datasets/open-index/hacker-news")!)
+                            Link("License", destination: URL(string: "https://opendatacommons.org/licenses/by/1-0/")!)
+                        }
+                    }.font(.footnote).foregroundStyle(.secondary).padding(.top, 4)
                 }
 
                 if !browser.saved.isEmpty {
@@ -309,8 +368,8 @@ struct FocusScreen: View {
                 }
 
                 VStack(alignment: .leading, spacing: 12) {
-                    Text("Explore your interests").font(.title2.bold())
-                    Text("Channel searches based on your interests.").font(.subheadline).foregroundStyle(.secondary)
+                    Text("Explore channels").font(.title2.bold())
+                    Text("Search YouTube for these channels.").font(.subheadline).foregroundStyle(.secondary)
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 10) {
                             ForEach(FocusRecommendations.channels) { channel in
@@ -319,7 +378,7 @@ struct FocusScreen: View {
                                         Image(systemName: "play.rectangle.fill").foregroundStyle(FocusTheme.accent)
                                         Text(channel.name).font(.subheadline.weight(.semibold)).lineLimit(2).multilineTextAlignment(.leading)
                                         Text(channel.topic).font(.caption).foregroundStyle(.secondary)
-                                    }.frame(width: 130, height: 100, alignment: .topLeading).padding(14)
+                                    }.frame(width: 130, alignment: .topLeading).frame(minHeight: 100, alignment: .topLeading).padding(14)
                                         .background(FocusTheme.surface, in: RoundedRectangle(cornerRadius: FocusTheme.corner))
                                 }.buttonStyle(.plain)
                             }
@@ -327,68 +386,47 @@ struct FocusScreen: View {
                     }
                 }
 
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack(alignment: .firstTextBaseline) {
-                        Text("Selected videos").font(.title2.bold())
-                        Spacer()
-                        if discovery.loading { ProgressView().controlSize(.small) }
-                        else {
-                            Button { Task { await discovery.refresh() } } label: { Image(systemName: "arrow.clockwise") }
-                                .accessibilityLabel("Refresh recommendations")
-                        }
-                    }
-                    Text("HackerTube picks from preset topics. Videos from channels whose names match your selected subscriptions appear first. Matching happens on this device; names may not be unique.")
-                        .font(.subheadline).foregroundStyle(.secondary)
-                    if let date = discovery.lastUpdated {
-                        Text("Updated \(date.formatted(date: .abbreviated, time: .shortened)) · \(visibleVideos.count) videos")
-                            .font(.caption).foregroundStyle(.secondary)
-                    } else {
-                        Text("Offline selection · \(visibleVideos.count) videos").font(.caption).foregroundStyle(.secondary)
-                    }
-                    if let notice = discovery.notice { Text(notice).font(.caption).foregroundStyle(.secondary) }
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 8) {
-                            ForEach(topics, id: \.self) { topic in
-                                Button { selectedTopic = topic } label: {
-                                    Text(topic).font(.subheadline.weight(.medium)).padding(.horizontal, 14).padding(.vertical, 9)
-                                        .foregroundStyle(selectedTopic == topic ? FocusTheme.background : Color.primary)
-                                        .background(selectedTopic == topic ? FocusTheme.accent : FocusTheme.surface, in: Capsule())
-                                }.buttonStyle(.plain).accessibilityAddTraits(selectedTopic == topic ? .isSelected : [])
-                            }
-                        }
-                    }
-                    ForEach(visibleVideos) { video in
-                        Button { browser.open(video.url) } label: { recommendationRow(video) }.buttonStyle(.plain)
-                    }
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Selections from HackerTube, based on open-index/hacker-news. Data: ODC-By 1.0.")
-                        HStack {
-                            Link("HackerTube", destination: URL(string: "https://hackertube.org/data")!)
-                            Link("Hacker News dataset", destination: URL(string: "https://huggingface.co/datasets/open-index/hacker-news")!)
-                            Link("License", destination: URL(string: "https://opendatacommons.org/licenses/by/1-0/")!)
-                        }
-                    }.font(.footnote).foregroundStyle(.secondary).padding(.top, 4)
-                }
+
 
 
             }.padding(.horizontal, 20).padding(.bottom, 32)
         }.scrollDismissesKeyboard(.interactively)
     }
 
+    private var quickLinks: some View {
+        HStack(spacing: 10) { subscriptionsLink; accountLink }
+    }
+
+    private var subscriptionsLink: some View {
+        Button { browser.open(URL(string: "https://m.youtube.com/feed/subscriptions")!) } label: {
+            Label("Subscriptions", systemImage: "rectangle.stack")
+                .frame(maxWidth: .infinity, minHeight: 44)
+        }.buttonStyle(.bordered).font(.subheadline.weight(.medium))
+    }
+
+    private var accountLink: some View {
+        Button { browser.open(URL(string: "https://m.youtube.com/channel_switcher")!) } label: {
+            Label("Account", systemImage: "person.crop.circle")
+                .frame(maxWidth: .infinity, minHeight: 44)
+        }.buttonStyle(.bordered).font(.subheadline.weight(.medium))
+    }
+
     private func recommendationRow(_ video: FocusRecommendation) -> some View {
-        HStack(alignment: .top, spacing: 12) {
+        HStack(alignment: .top, spacing: 14) {
             AsyncImage(url: URL(string: "https://i.ytimg.com/vi/\(video.id)/mqdefault.jpg")) { image in
                 image.resizable().scaledToFill()
             } placeholder: {
                 Rectangle().fill(FocusTheme.surface).overlay(Image(systemName: "play.fill").foregroundStyle(FocusTheme.accent))
             }
-            .frame(width: 112, height: 72).clipped().clipShape(RoundedRectangle(cornerRadius: 10)).accessibilityHidden(true)
-            VStack(alignment: .leading, spacing: 4) {
-                Text(video.title).font(.subheadline.weight(.semibold)).lineLimit(3).multilineTextAlignment(.leading)
-                Text(video.channel).font(.caption).foregroundStyle(.secondary).lineLimit(1)
-                Text(video.reason).font(.caption2).foregroundStyle(FocusTheme.accent).lineLimit(2).multilineTextAlignment(.leading)
+            .frame(width: 120, height: 68).clipped().clipShape(RoundedRectangle(cornerRadius: 9)).accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 5) {
+                Text(video.title).font(.subheadline.weight(.semibold)).fixedSize(horizontal: false, vertical: true).multilineTextAlignment(.leading)
+                Text(video.channel).font(.caption).foregroundStyle(.secondary).multilineTextAlignment(.leading)
+                Text(video.reason).font(.caption).foregroundStyle(.secondary).multilineTextAlignment(.leading)
             }.frame(maxWidth: .infinity, alignment: .leading)
-        }.padding(10).frame(maxWidth: .infinity, alignment: .leading).background(FocusTheme.surface, in: RoundedRectangle(cornerRadius: FocusTheme.corner))
+        }
+        .padding(.vertical, 8).frame(maxWidth: .infinity, minHeight: 60, alignment: .leading)
+        .contentShape(Rectangle()).accessibilityElement(children: .combine)
     }
     private func search() { typing = false; browser.submit(input) }
     private var selectedIDs: Set<String> { Set(selectedChannelIDs.split(separator: ",").map(String.init)) }
