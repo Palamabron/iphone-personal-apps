@@ -26,10 +26,11 @@ import Foundation
         let b = FocusRecommendation(id: "bbbbbbbbbbb", title: "b", channel: "Other", topic: "AI & ML", reason: "test")
         let c = FocusRecommendation(id: "ccccccccccc", title: "c", channel: "EXAMPLE   CHANNEL", topic: "AI & ML", reason: "test")
         let items = [b, a, c]
-        precondition(FocusRecommendations.prioritize(items, selectedChannelNames: []).map(\.id) == [b.id, a.id, c.id])
-        precondition(FocusRecommendations.prioritize(items, selectedChannelNames: ["  example channel\n"]).map(\.id) == [a.id, c.id, b.id])
-        precondition(FocusRecommendations.prioritize(items, selectedChannelNames: ["example"]).map(\.id) == [b.id, a.id, c.id])
-        precondition(FocusRecommendations.prioritize(items, selectedChannelNames: [" "]).map(\.id) == [b.id, a.id, c.id])
+        let anyAge = FocusRankingPreferences(maxAgeMonths: nil)
+        precondition(FocusRecommendations.prioritize(items, selectedChannelNames: [], preferences: anyAge).map(\.id) == [b.id, a.id, c.id])
+        precondition(FocusRecommendations.prioritize(items, selectedChannelNames: ["  example channel\n"], preferences: anyAge).map(\.id) == [a.id, c.id, b.id])
+        precondition(FocusRecommendations.prioritize(items, selectedChannelNames: ["example"], preferences: anyAge).map(\.id) == [b.id, a.id, c.id])
+        precondition(FocusRecommendations.prioritize(items, selectedChannelNames: [" "], preferences: anyAge).map(\.id) == [b.id, a.id, c.id])
         let old = FocusRecommendations.publishedDate("2020-01-01T12:00:00Z")!
         let recent = FocusRecommendations.publishedDate("2026-01-01T12:00:00.000Z")!
         precondition(FocusRecommendations.publishedDate("not-a-date") == nil)
@@ -43,6 +44,42 @@ import Foundation
         precondition(FocusRecommendations.sortByPublication([sameDate, datedA], order: .newest, date: { $0.publishedAt }).map(\.id) == [c.id, a.id])
         let cached = #"{"id":"aaaaaaaaaaa","title":"a","channel":"Example Channel","topic":"Computing","reason":"test"}"#.data(using: .utf8)!
         precondition((try! JSONDecoder().decode(FocusRecommendation.self, from: cached)).publishedAt == nil)
+        let oldCache = try! JSONDecoder().decode(FocusRecommendation.self, from: cached)
+        precondition(oldCache.shelfLife == nil && oldCache.hnRecommenders == nil)
+
+        let now = FocusRecommendations.publishedDate("2026-11-04T12:00:00Z")!
+        var fresh = a; fresh.publishedAt = FocusRecommendations.publishedDate("2026-10-30T12:00:00Z")
+        var evergreen = b; evergreen.publishedAt = FocusRecommendations.publishedDate("2020-01-01T12:00:00Z"); evergreen.shelfLife = "evergreen"; evergreen.hnRecommenders = 4
+        var staleNews = c; staleNews.publishedAt = evergreen.publishedAt; staleNews.shelfLife = "news"; staleNews.hnRecommenders = 4
+        precondition(FocusRecommendations.prioritize([staleNews, evergreen, fresh], selectedChannelNames: [], now: now).map(\.id) == [fresh.id])
+        let ranked = FocusRecommendations.prioritize([staleNews, evergreen, fresh], selectedChannelNames: [], preferences: anyAge, now: now)
+        precondition(ranked.map(\.id) == [fresh.id, evergreen.id, staleNews.id])
+        precondition(ranked[0].reason.contains("Published recently"))
+        precondition(ranked[1].reason.contains("Marked evergreen by HackerTube"))
+        var weakEvergreen = evergreen; weakEvergreen.hnRecommenders = 1
+        precondition(!FocusRecommendations.prioritize([weakEvergreen], selectedChannelNames: [], preferences: anyAge, now: now)[0].reason.contains("Marked evergreen"))
+
+        var feedback = FocusRankingPreferences(maxAgeMonths: nil)
+        feedback.moreLike(evergreen)
+        for _ in 0..<10 { feedback.moreLike(evergreen) }
+        precondition(feedback.channels[FocusRecommendations.channelNameKey(evergreen.channel)] == 3)
+        precondition(feedback.topics[evergreen.topic] == 3)
+        var sameAge = fresh; sameAge.publishedAt = evergreen.publishedAt
+        let learned = FocusRecommendations.prioritize([sameAge, evergreen], selectedChannelNames: [], preferences: feedback, now: now)
+        precondition(learned[0].id == evergreen.id && learned[0].reason.contains("asked to see more"))
+        feedback.hide(evergreen)
+        precondition(FocusRecommendations.prioritize([sameAge, evergreen], selectedChannelNames: [], preferences: feedback, now: now).map(\.id) == [sameAge.id])
+        feedback.unhideAll()
+        precondition(feedback.hiddenIDs.isEmpty)
+        feedback.maxAgeMonths = 12
+        var future = staleNews; future.publishedAt = now.addingTimeInterval(3 * 86400)
+        precondition(FocusRecommendations.prioritize([fresh, evergreen, oldCache, future], selectedChannelNames: [], preferences: feedback, now: now).map(\.id) == [fresh.id])
+        let storedFeedback = try! JSONEncoder().encode(feedback)
+        precondition((try! JSONDecoder().decode(FocusRankingPreferences.self, from: storedFeedback)) == feedback)
+        let oldPreferences = #"{"channels":{},"topics":{},"hiddenIDs":[]}"#.data(using: .utf8)!
+        precondition((try! JSONDecoder().decode(FocusRankingPreferences.self, from: oldPreferences)).maxAgeMonths == 24)
+        let anyAgePreferences = try! JSONEncoder().encode(anyAge)
+        precondition((try! JSONDecoder().decode(FocusRankingPreferences.self, from: anyAgePreferences)).maxAgeMonths == nil)
         print("Native URL policy: search, video links, Shorts, auth allowlist and hostile URLs passed")
     }
 }

@@ -10,10 +10,60 @@ struct FocusRecommendation: Identifiable, Codable {
     let title: String
     let channel: String
     let topic: String
-    let reason: String
+    var reason: String
     var publishedAt: Date? = nil
+    // HackerTube's own classification and count, when supplied by that source.
+    // Neither is a guarantee of video quality or present-day accuracy.
+    var shelfLife: String? = nil
+    var hnRecommenders: Int? = nil
 
     var url: URL { URL(string: "https://m.youtube.com/watch?v=" + id)! }
+}
+
+// All feedback remains on this device. Keys are normalized before matching.
+struct FocusRankingPreferences: Codable, Equatable {
+    var channels: [String: Int] = [:]
+    var topics: [String: Int] = [:]
+    var hiddenIDs: Set<String> = []
+    // nil has no hard age cutoff; the ranking still favors recent videos.
+    var maxAgeMonths: Int? = 24
+
+    private enum CodingKeys: String, CodingKey { case channels, topics, hiddenIDs, maxAgeMonths }
+
+    init(channels: [String: Int] = [:], topics: [String: Int] = [:], hiddenIDs: Set<String> = [], maxAgeMonths: Int? = 24) {
+        self.channels = channels; self.topics = topics; self.hiddenIDs = hiddenIDs; self.maxAgeMonths = maxAgeMonths
+    }
+
+    init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        channels = try values.decodeIfPresent([String: Int].self, forKey: .channels) ?? [:]
+        topics = try values.decodeIfPresent([String: Int].self, forKey: .topics) ?? [:]
+        hiddenIDs = try values.decodeIfPresent(Set<String>.self, forKey: .hiddenIDs) ?? []
+        // An older stored object without this key adopts the new default.
+        // Explicit null is reserved for the user's "Any age" choice.
+        if values.contains(.maxAgeMonths) { maxAgeMonths = try values.decodeIfPresent(Int.self, forKey: .maxAgeMonths) }
+        else { maxAgeMonths = 24 }
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var values = encoder.container(keyedBy: CodingKeys.self)
+        try values.encode(channels, forKey: .channels)
+        try values.encode(topics, forKey: .topics)
+        try values.encode(hiddenIDs, forKey: .hiddenIDs)
+        if let maxAgeMonths { try values.encode(maxAgeMonths, forKey: .maxAgeMonths) }
+        else { try values.encodeNil(forKey: .maxAgeMonths) }
+    }
+
+    mutating func moreLike(_ video: FocusRecommendation) {
+        let key = FocusRecommendations.channelNameKey(video.channel)
+        if !key.isEmpty { channels[key] = min(3, max(0, channels[key] ?? 0) + 1) }
+        if FocusRecommendations.topics.contains(video.topic) {
+            topics[video.topic] = min(3, max(0, topics[video.topic] ?? 0) + 1)
+        }
+    }
+
+    mutating func hide(_ video: FocusRecommendation) { hiddenIDs.insert(video.id) }
+    mutating func unhideAll() { hiddenIDs.removeAll() }
 }
 
 struct FocusChannel: Identifiable {
@@ -55,20 +105,54 @@ enum FocusRecommendations {
     }
 
     // HackerTube results contain display names, not verified YouTube channel IDs.
-    // Match locally and keep each partition in its original source order.
-    static func prioritize(_ videos: [FocusRecommendation], selectedChannelNames: [String]) -> [FocusRecommendation] {
+    // Ranking is a local heuristic, not a guarantee of quality or accuracy.
+    static func prioritize(_ videos: [FocusRecommendation], selectedChannelNames: [String], preferences: FocusRankingPreferences = .init(), now: Date = Date()) -> [FocusRecommendation] {
         let names = Set(selectedChannelNames.map(channelNameKey).filter { !$0.isEmpty })
-        guard !names.isEmpty else { return videos }
-        var matching: [FocusRecommendation] = []
-        var other: [FocusRecommendation] = []
-        for video in videos {
-            if names.contains(channelNameKey(video.channel)) { matching.append(video) }
-            else { other.append(video) }
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        let cutoff = preferences.maxAgeMonths.flatMap { calendar.date(byAdding: .month, value: -min(120, max(1, $0)), to: now) }
+        let candidates = videos.enumerated().compactMap { index, original -> (Int, Int, FocusRecommendation)? in
+            guard !preferences.hiddenIDs.contains(original.id) else { return nil }
+            // A future date is not evidence of freshness. With a hard age limit,
+            // exclude unknown or implausibly future-dated items as well.
+            let validDate = original.publishedAt.flatMap { $0 <= now.addingTimeInterval(86400) ? $0 : nil }
+            if let cutoff { guard let validDate, validDate >= cutoff else { return nil } }
+            let ageDays = validDate.map { max(0, now.timeIntervalSince($0) / 86400) }
+            let freshness: Int
+            switch ageDays {
+            case let days? where days <= 30: freshness = 100
+            case let days? where days <= 90: freshness = 80
+            case let days? where days <= 180: freshness = 60
+            case let days? where days <= 365: freshness = 40
+            case let days? where days <= 730: freshness = 15
+            case .some(_): freshness = -10
+            case nil: freshness = -30
+            }
+            let key = channelNameKey(original.channel)
+            let selected = names.contains(key)
+            let channelWeight = min(3, max(0, preferences.channels[key] ?? 0))
+            let topicWeight = min(3, max(0, preferences.topics[original.topic] ?? 0))
+            let recommenders = min(5, max(0, original.hnRecommenders ?? 0))
+            let evergreen = original.shelfLife?.lowercased() == "evergreen" && recommenders >= 2
+            let oldNews = original.shelfLife?.lowercased() == "news" && (ageDays ?? 0) > 365
+            let score = freshness + (selected ? 22 : 0) + channelWeight * 10 + topicWeight * 5 + recommenders * 3 + (evergreen ? 20 : 0) - (oldNews ? 40 : 0)
+            var video = original
+            let signal: String?
+            if selected { signal = "Channel name matches your selection" }
+            else if channelWeight > 0 { signal = "Channel you asked to see more of" }
+            else if topicWeight > 0 { signal = "Topic you asked to see more of" }
+            else if let ageDays, ageDays <= 90 { signal = "Published recently" }
+            else if evergreen { signal = "Marked evergreen by HackerTube" }
+            else { signal = nil }
+            if let signal { video.reason = original.reason + " · " + signal }
+            return (index, score, video)
         }
-        return matching + other
+        return candidates.sorted { left, right in
+            left.1 == right.1 ? left.0 < right.0 : left.1 > right.1
+        }.map { $0.2 }
     }
 
-    private static func channelNameKey(_ name: String) -> String {
+    static func channelNameKey(_ name: String) -> String {
         name.components(separatedBy: .whitespacesAndNewlines)
             .filter { !$0.isEmpty }
             .joined(separator: " ")

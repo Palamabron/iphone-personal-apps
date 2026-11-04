@@ -21,7 +21,7 @@ final class FocusDiscovery: ObservableObject {
         if let data = UserDefaults.standard.data(forKey: cacheKey),
            let cache = try? JSONDecoder().decode(Cache.self, from: data) {
             let safe = cache.videos.filter { FocusPolicy.validID($0.id) && FocusRecommendations.topics.contains($0.topic) }
-            if !safe.isEmpty { videos = Array(safe.prefix(32)); lastUpdated = cache.date }
+            if !safe.isEmpty { videos = Array(safe.prefix(96)); lastUpdated = cache.date }
         }
     }
 
@@ -69,7 +69,9 @@ final class FocusDiscovery: ObservableObject {
         if merged.isEmpty {
             notice = videos.isEmpty ? "Could not refresh. Showing the offline selection." : "Could not refresh. Showing the last saved selection."
         } else {
-            videos = Array(merged.prefix(32))
+            // Rank after gathering a finite cross-topic pool, rather than
+            // discarding most candidates before freshness can be considered.
+            videos = Array(merged.prefix(96))
             lastUpdated = Date()
             if lists.contains(where: { $0.isEmpty }) { notice = "Some sources did not return results." }
             if let data = try? JSONEncoder().encode(Cache(videos: videos, date: lastUpdated!)) {
@@ -88,11 +90,14 @@ final class FocusDiscovery: ObservableObject {
         init(query: String, topic: String) { self.area = nil; self.query = query; self.topic = topic; self.sort = "recent" }
     }
     private struct Video: Decodable {
+        struct HackerNews: Decodable { let recommenders: Int? }
         let vid: String
         let title: String
         let channel: String
         let duration_s: Int?
         let published: String?
+        let shelf_life: String?
+        let hn: HackerNews?
     }
     private struct SearchResponse: Decodable { let results: [Video] }
 
@@ -118,8 +123,11 @@ final class FocusDiscovery: ObservableObject {
                 guard FocusPolicy.validID(video.vid), let duration = video.duration_s, duration > 180,
                       !video.title.isEmpty, !video.channel.isEmpty,
                       source.query == nil || video.channel.caseInsensitiveCompare(source.query!) == .orderedSame else { return nil }
+                let recommenders = video.hn?.recommenders
                 return FocusRecommendation(id: video.vid, title: String(video.title.prefix(200)), channel: String(video.channel.prefix(100)), topic: source.topic,
-                    reason: source.query == nil ? "Recommended on Hacker News" : "From a preset channel", publishedAt: FocusRecommendations.publishedDate(video.published))
+                    reason: source.query == nil ? "Listed on HackerTube" : "From a preset channel", publishedAt: FocusRecommendations.publishedDate(video.published),
+                    shelfLife: ["evergreen", "dated", "news"].contains(video.shelf_life ?? "") ? video.shelf_life : nil,
+                    hnRecommenders: recommenders.flatMap { $0 >= 0 ? min($0, 100_000) : nil })
             }
         } catch { return [] }
     }

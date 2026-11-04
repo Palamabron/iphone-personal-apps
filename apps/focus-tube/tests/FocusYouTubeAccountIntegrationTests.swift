@@ -68,6 +68,7 @@ private final class TestBed {
     var challenge: String?
     var tokenRequests: [URLRequest] = []
     var now = Date()
+    let freshCache = UserDefaults(suiteName: "FocusFreshTest-" + UUID().uuidString)!
     let client = "12345-test.apps.googleusercontent.com"
     let oauthScope = "https://www.googleapis.com/auth/youtube.readonly"
 
@@ -95,12 +96,190 @@ private final class TestBed {
             },
             observeTokenRequest: { [unowned self] in self.tokenRequests.append($0) },
             now: { [unowned self] in self.now },
+            freshCache: freshCache,
             read: { [unowned self] in self.stored },
             write: { [unowned self] in self.stored = $0 },
             delete: { [unowned self] in self.stored = nil }
         )
         return FocusYouTubeAccount(testHooks: hooks)
     }
+}
+
+@MainActor
+private func testFreshYouTubeDiscovery() async throws {
+    let bed = TestBed()
+    let account = bed.makeAccount()
+    MockURLProtocol.configure { _ in Reply(status: 500, json: "{}") }
+    await account.refreshFreshVideosIfNeeded()
+    try check(MockURLProtocol.requests().isEmpty && account.freshNotice != nil, "Signed-out discovery must explain the requirement and make no requests")
+
+    let recent = ISO8601DateFormatter().string(from: bed.now.addingTimeInterval(-86_400))
+    let old = ISO8601DateFormatter().string(from: bed.now.addingTimeInterval(-400 * 86_400))
+    let searchItems = [
+        ("aaaaaaaaaaa", "Useful", "Channel A"), ("bbbbbbbbbbb", "Short", "Channel A"),
+        ("ccccccccccc", "Old", "Channel B"), ("ddddddddddd", "Live", "Channel C"),
+        ("eeeeeeeeeee", "Recent", "Channel D")
+    ].map { "{\"id\":{\"videoId\":\"\($0.0)\"},\"snippet\":{\"title\":\"\($0.1)\",\"channelTitle\":\"\($0.2)\"}}" }.joined(separator: ",")
+    func video(_ id: String, _ duration: String, _ date: String, _ live: String) -> String {
+        "{\"id\":\"\(id)\",\"contentDetails\":{\"duration\":\"\(duration)\"},\"snippet\":{\"publishedAt\":\"\(date)\",\"liveBroadcastContent\":\"\(live)\"}}"
+    }
+    let details = [video("aaaaaaaaaaa", "PT600S", recent, "none"), video("bbbbbbbbbbb", "PT120S", recent, "none"),
+                   video("ccccccccccc", "PT600S", old, "none"), video("ddddddddddd", "PT600S", recent, "live"),
+                   video("eeeeeeeeeee", "PT600S", recent, "none")].joined(separator: ",")
+    func configure(_ failSearch: Bool = false) {
+        MockURLProtocol.configure { request in
+            switch request.url?.path {
+            case "/token": return Reply(status: 200, json: tokenResponse)
+            case "/youtube/v3/search": return failSearch ? Reply(status: 500, json: "{}") : Reply(status: 200, json: "{\"items\":[\(searchItems)]}")
+            case "/youtube/v3/videos": return Reply(status: 200, json: "{\"items\":[\(details)]}")
+            default: return Reply(status: 500, json: "{}")
+            }
+        }
+    }
+    configure()
+    await account.signIn()
+    try check(account.freshNotice == nil, "Successful sign-in must clear the stale connect notice")
+    await account.refreshFreshVideosIfNeeded()
+    try check(account.freshVideos.map(\.id) == ["aaaaaaaaaaa", "eeeeeeeeeee"], "Discovery must deduplicate and exclude short, old and live videos")
+    try check(account.freshVideos.allSatisfy { $0.publishedAt != nil && $0.reason == "Recent YouTube search result" }, "Discovery must report actual dates and its source")
+    let searches = MockURLProtocol.requests().filter { $0.url?.path == "/youtube/v3/search" }
+    try check(searches.count == 4, "Only four bounded topic searches are allowed")
+    try check(Set(searches.compactMap { query($0, "q") }) == Set(["machine learning", "science research", "computer science", "startup entrepreneurship"]), "Queries must be fixed and independent of private account data")
+    try check(searches.allSatisfy { query($0, "order") == "relevance" && query($0, "publishedAfter") != nil && query($0, "maxResults") == "25" }, "Queries must bound age and number of results")
+    try check(MockURLProtocol.requests().filter { $0.url?.path == "/youtube/v3/videos" }.count == 1, "Video metadata is retrieved in bounded batches")
+    configure()
+    await account.refreshFreshVideosIfNeeded()
+    try check(MockURLProtocol.requests().isEmpty, "A successful search must be cached for 24 hours")
+    await account.refreshFreshVideos(force: true)
+    try check(MockURLProtocol.requests().filter { $0.url?.path == "/youtube/v3/search" }.count == 4, "A manual refresh must bypass a fresh automatic cache")
+    configure()
+    await account.refreshFreshVideos(force: true)
+    try check(MockURLProtocol.requests().isEmpty && account.freshNotice?.contains("wait") == true, "Repeated manual taps must observe the visible cooldown")
+    bed.now.addTimeInterval(5 * 60 + 1)
+    await account.refreshFreshVideos(force: true)
+    try check(MockURLProtocol.requests().filter { $0.url?.path == "/youtube/v3/search" }.count == 4, "Manual refresh must work after its cooldown")
+    let restored = bed.makeAccount()
+    try check(restored.freshVideos.map(\.id) == account.freshVideos.map(\.id) && restored.freshLastUpdated != nil, "A later launch must restore the dated public cache")
+    bed.now.addTimeInterval(24 * 60 * 60 + 1)
+    configure(true)
+    await account.refreshFreshVideosIfNeeded()
+    try check(account.freshVideos.count == 2 && account.freshNotice != nil, "Failed refresh must preserve cached results and explain the failure")
+    configure()
+    await account.refreshFreshVideosIfNeeded()
+    try check(MockURLProtocol.requests().isEmpty, "A failed refresh must observe its retry delay")
+    bed.now.addTimeInterval(6 * 60 * 60 + 1)
+    await account.refreshFreshVideosIfNeeded()
+    try check(MockURLProtocol.requests().filter { $0.url?.path == "/youtube/v3/search" }.count == 4, "Discovery must retry after the bounded failure delay")
+    let lastSuccessfulUpdate = account.freshLastUpdated
+    MockURLProtocol.configure { request in
+        if request.url?.path == "/youtube/v3/search" { return Reply(status: 200, json: #"{"items":[]}"#) }
+        return Reply(status: 500, json: "{}")
+    }
+    await account.refreshFreshVideos(force: true)
+    try check(account.freshVideos.count == 2 && account.freshLastUpdated == lastSuccessfulUpdate, "An empty search must keep the previous results and their original date")
+    try check(account.freshNotice?.contains("last saved results") == true, "An empty search must explain that the visible results are saved")
+
+    let limitBed = TestBed()
+    let limited = limitBed.makeAccount()
+    configure()
+    await limited.signIn()
+    for _ in 0..<12 {
+        configure()
+        await limited.refreshFreshVideos(force: true)
+        try check(MockURLProtocol.requests().filter { $0.url?.path == "/youtube/v3/search" }.count == 4, "Manual refreshes below the daily cap must run")
+        limitBed.now.addTimeInterval(5 * 60 + 1)
+    }
+    configure()
+    await limited.refreshFreshVideos(force: true)
+    try check(MockURLProtocol.requests().isEmpty && limited.freshNotice?.contains("limit") == true, "Daily limit must visibly stop further searches")
+    limitBed.now.addTimeInterval(24 * 60 * 60)
+    await limited.refreshFreshVideos(force: true)
+    try check(MockURLProtocol.requests().filter { $0.url?.path == "/youtube/v3/search" }.count == 4, "Manual searches must recover when the rolling limit expires")
+
+    let busyBed = TestBed()
+    let busyAccount = busyBed.makeAccount()
+    configure()
+    await busyAccount.signIn()
+    MockURLProtocol.configure { request in
+        if request.url?.path == "/youtube/v3/channels" { return Reply(status: 200, json: ownResponse, delay: 0.2) }
+        if request.url?.path == "/youtube/v3/subscriptions" { return Reply(status: 200, json: #"{"items":[]}"#) }
+        return Reply(status: 500, json: "{}")
+    }
+    let syncing = Task { await busyAccount.sync() }
+    try await Task.sleep(nanoseconds: 60_000_000)
+    await busyAccount.refreshFreshVideos(force: true)
+    try check(busyAccount.freshNotice?.contains("busy") == true, "Manual refresh must explain when account sync is busy")
+    try check(!MockURLProtocol.requests().contains { $0.url?.path == "/youtube/v3/search" }, "A refresh must not race an account sync")
+    await syncing.value
+
+    let loadingBed = TestBed()
+    let loading = loadingBed.makeAccount()
+    configure()
+    await loading.signIn()
+    MockURLProtocol.configure { request in
+        if request.url?.path == "/youtube/v3/search" { return Reply(status: 200, json: "{\"items\":[\(searchItems)]}", delay: 0.2) }
+        if request.url?.path == "/youtube/v3/videos" { return Reply(status: 200, json: "{\"items\":[\(details)]}") }
+        return Reply(status: 500, json: "{}")
+    }
+    let firstSearch = Task { await loading.refreshFreshVideosIfNeeded() }
+    try await Task.sleep(nanoseconds: 60_000_000)
+    await loading.refreshFreshVideos(force: true)
+    try check(loading.freshNotice?.contains("already in progress") == true, "Repeated taps must explain that a search is running")
+    await firstSearch.value
+    try check(MockURLProtocol.requests().filter { $0.url?.path == "/youtube/v3/search" }.count == 4, "A repeated tap must not start another search batch")
+    MockURLProtocol.configure { request in
+        if request.url?.path == "/youtube/v3/channels" { return Reply(status: 200, json: ownResponse, delay: 0.2) }
+        if request.url?.path == "/youtube/v3/subscriptions" { return Reply(status: 200, json: #"{"items":[]}"#) }
+        return Reply(status: 500, json: "{}")
+    }
+    let loadingSync = Task { await loading.sync() }
+    try await Task.sleep(nanoseconds: 60_000_000)
+    await loading.refreshFreshVideos(force: true)
+    try check(loading.freshNotice?.contains("busy") == true, "A manual search during sync should report a busy account")
+    await loadingSync.value
+    await loading.refreshFreshVideosIfNeeded()
+    try check(loading.freshNotice == nil, "A cached successful result must clear a stale busy notice")
+
+    let clearBed = TestBed()
+    let clearAccount = clearBed.makeAccount()
+    configure()
+    await clearAccount.signIn()
+    await clearAccount.refreshFreshVideosIfNeeded()
+    try check(!clearAccount.freshVideos.isEmpty, "A successful search should fill the public cache")
+    clearAccount.signOut()
+    try check(clearAccount.freshVideos.isEmpty && clearAccount.freshLastUpdated == nil && clearAccount.freshNotice == nil, "Sign-out must clear the displayed discovery cache")
+    try check(clearBed.freshCache.data(forKey: "focus.youtube.discovery.v1") == nil, "Sign-out must remove stored YouTube discovery data")
+
+    let expiredBed = TestBed()
+    let expiry = expiredBed.makeAccount()
+    configure()
+    await expiry.signIn()
+    await expiry.refreshFreshVideosIfNeeded()
+    expiredBed.now.addTimeInterval(8 * 24 * 60 * 60)
+    let afterExpiry = expiredBed.makeAccount()
+    try check(afterExpiry.freshVideos.isEmpty && expiredBed.freshCache.data(forKey: "focus.youtube.discovery.v1") == nil, "Expired YouTube API metadata must not survive a later launch")
+
+    let signingOutBed = TestBed()
+    let signingOut = signingOutBed.makeAccount()
+    configure()
+    await signingOut.signIn()
+    MockURLProtocol.configure { request in
+        if request.url?.path == "/youtube/v3/search" { return Reply(status: 200, json: "{\"items\":[\(searchItems)]}", delay: 0.2) }
+        return Reply(status: 500, json: "{}")
+    }
+    let pending = Task { await signingOut.refreshFreshVideosIfNeeded() }
+    try await Task.sleep(nanoseconds: 60_000_000)
+    signingOut.signOut()
+    await pending.value
+    try check(signingOut.freshVideos.isEmpty, "A response received after sign-out must not publish discovery results")
+    let pendingSearches = MockURLProtocol.requests().filter { $0.url?.path == "/youtube/v3/search" }.count
+    try check((1...4).contains(pendingSearches), "Concurrent public searches must stay within their fixed bound")
+    try check(!MockURLProtocol.requests().contains { $0.url?.path == "/youtube/v3/videos" }, "Sign-out must stop authenticated metadata requests")
+    try check(signingOutBed.freshCache.data(forKey: "focus.youtube.discovery.v1") == nil && signingOutBed.freshCache.object(forKey: "focus.youtube.discovery.attempt.v1") == nil, "Sign-out must remove cached results and an interrupted retry delay")
+    configure()
+    await signingOut.signIn()
+    await signingOut.refreshFreshVideosIfNeeded()
+    try check(MockURLProtocol.requests().filter { $0.url?.path == "/youtube/v3/search" }.count == 4, "A fresh sign-in must not inherit a cancelled automatic retry delay")
 }
 
 private let a = "UC" + String(repeating: "a", count: 22)
@@ -397,6 +576,7 @@ struct AccountIntegrationTestApp: App {
                 do {
                     try await testInvalidCallbacks()
                     try await testPaginationAndUploads()
+                    try await testFreshYouTubeDiscovery()
                     try await testPaginationCycle()
                     try await testAutomaticRetry()
                     try await testExpiredToken()

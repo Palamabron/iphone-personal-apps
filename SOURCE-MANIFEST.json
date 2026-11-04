@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-04T09:13:07.288Z",
+  "generatedAt": "2026-11-04T09:38:49.727Z",
   "textLineEndings": "LF",
   "files": [
     {
@@ -49,13 +49,13 @@
     },
     {
       "path": "apps/focus-tube/ios/FocusApp.swift",
-      "bytes": 31565,
-      "sha256": "ee0bf17e4d3a68afb07f2b440d6058c90d4fa9dffac0604297e7e3272907679d"
+      "bytes": 39388,
+      "sha256": "9ae09d1a6445aadd02e841e2f71ef32ea7e244aa1b9cf374f3dc6ea687a88b07"
     },
     {
       "path": "apps/focus-tube/ios/FocusDiscovery.swift",
-      "bytes": 6457,
-      "sha256": "7ca403c7fc30bc0110fb31b2ef7beef69771ae7bafaaf20e6980eb2316583ded"
+      "bytes": 7002,
+      "sha256": "3ecfa252c30fb654be67a5079cac60a34b2b34d178a57cf0a25558626cb596a2"
     },
     {
       "path": "apps/focus-tube/ios/FocusOAuthForm.swift",
@@ -69,13 +69,13 @@
     },
     {
       "path": "apps/focus-tube/ios/FocusRecommendations.swift",
-      "bytes": 6861,
-      "sha256": "a2d75d71b61aad2ad3cd4863983d674b522c8ec7a9f16337c7758275d01fe045"
+      "bytes": 11921,
+      "sha256": "81c960680c5bbe379186e1a3a35efb9dc4bfac1c324cb4f3b85b4ea0a719af61"
     },
     {
       "path": "apps/focus-tube/ios/FocusYouTubeAccount.swift",
-      "bytes": 27310,
-      "sha256": "6e279982db80a802301c86a1d1d9b5b04c073f15872643d28570bbe705ca2b6d"
+      "bytes": 41050,
+      "sha256": "41cad54e8431f88f6cffd24e4a156e9e04fa186722a998d3c63243e63aea2c02"
     },
     {
       "path": "apps/focus-tube/ios/Main.html",
@@ -154,13 +154,13 @@
     },
     {
       "path": "apps/focus-tube/tests/FocusPolicyTests.swift",
-      "bytes": 4495,
-      "sha256": "f1e6b8f5496aae578e3819f02be8111bdb52f677b785e1b04d1f260131f689dc"
+      "bytes": 7851,
+      "sha256": "001ff8465dfaeef109644ff4e435ef5feb43f5bb354527fd56ba116800de613e"
     },
     {
       "path": "apps/focus-tube/tests/FocusYouTubeAccountIntegrationTests.swift",
-      "bytes": 23883,
-      "sha256": "21792904f5aaf8db5eba90b25c427898f24cd20d6a65bb84b69a48ad27080645"
+      "bytes": 35836,
+      "sha256": "02bd67a38e1c50be9309966b4dc8b8489f564717737156c2ce62940b4cd1a1cc"
     },
     {
       "path": "apps/focus-tube/tests/core.test.mjs",
