@@ -3,11 +3,15 @@ import WebKit
 import UIKit
 
 private enum FocusTheme {
-    static let background = Color(red: 0.035, green: 0.055, blue: 0.050)
-    static let accent = Color(red: 0.81, green: 0.92, blue: 0.65)
-    static let surface = Color(red: 0.095, green: 0.125, blue: 0.113)
-    static let elevated = Color(red: 0.13, green: 0.16, blue: 0.145)
-    static let border = Color.white.opacity(0.09)
+    private static func adaptive(light: UIColor, dark: UIColor) -> UIColor {
+        UIColor { traits in traits.userInterfaceStyle == .dark ? dark : light }
+    }
+    static let uiBackground = adaptive(light: UIColor(red: 0.965, green: 0.973, blue: 0.961, alpha: 1), dark: UIColor(red: 0.035, green: 0.055, blue: 0.050, alpha: 1))
+    static let background = Color(uiColor: uiBackground)
+    static let accent = Color(uiColor: adaptive(light: UIColor(red: 0.161, green: 0.349, blue: 0.278, alpha: 1), dark: UIColor(red: 0.81, green: 0.92, blue: 0.65, alpha: 1)))
+    static let surface = Color(uiColor: adaptive(light: .white, dark: UIColor(red: 0.095, green: 0.125, blue: 0.113, alpha: 1)))
+    static let elevated = Color(uiColor: adaptive(light: UIColor(white: 0.94, alpha: 1), dark: UIColor(red: 0.13, green: 0.16, blue: 0.145, alpha: 1)))
+    static let border = Color.primary.opacity(0.09)
     static let corner: CGFloat = 18
 }
 
@@ -15,7 +19,7 @@ private enum FocusTheme {
 struct FocusApp: App {
     @StateObject private var browser = FocusBrowser()
     var body: some Scene {
-        WindowGroup { FocusScreen(browser: browser).preferredColorScheme(.dark).tint(FocusTheme.accent) }
+        WindowGroup { FocusScreen(browser: browser).tint(FocusTheme.accent) }
     }
 }
 
@@ -53,7 +57,7 @@ final class FocusBrowser: NSObject, ObservableObject, WKNavigationDelegate, WKUI
         webView.uiDelegate = self
         webView.allowsBackForwardNavigationGestures = true
         webView.isOpaque = false
-        webView.backgroundColor = UIColor(red: 0.035, green: 0.055, blue: 0.050, alpha: 1)
+        webView.backgroundColor = FocusTheme.uiBackground
         saved = (UserDefaults.standard.data(forKey: "focus.saved.v1").flatMap { try? JSONDecoder().decode([SavedFilm].self, from: $0) } ?? []).filter { URL(string: $0.url).map { FocusPolicy.isYouTube($0) && !FocusPolicy.isShorts($0) } ?? false }
         observations.append(webView.observe(\.canGoBack, options: [.new]) { [weak self] _, change in
             DispatchQueue.main.async { self?.canGoBack = change.newValue ?? false }

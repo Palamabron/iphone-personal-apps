@@ -51,7 +51,12 @@ jobs:
           xcrun simctl install "$DEVICE" build/simulator/Build/Products/Release-iphonesimulator/FocusTubeNative.app
           xcrun simctl launch "$DEVICE" dev.palamabron.focustube.native
           sleep 4
-          xcrun simctl io "$DEVICE" screenshot build/ios/FocusTubeNative-home.png
+          xcrun simctl ui "$DEVICE" appearance light
+          sleep 2
+          xcrun simctl io "$DEVICE" screenshot build/ios/FocusTubeNative-home-light.png
+          xcrun simctl ui "$DEVICE" appearance dark
+          sleep 2
+          xcrun simctl io "$DEVICE" screenshot build/ios/FocusTubeNative-home-dark.png
       - uses: actions/upload-artifact@v4
         if: always()
         with:
