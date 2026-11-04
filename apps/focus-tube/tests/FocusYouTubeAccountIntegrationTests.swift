@@ -149,7 +149,7 @@ private func testPaginationAndUploads() async throws {
             return Reply(status: 200, json: "{\"items\":[\(items)]}")
         }
         if path == "/youtube/v3/videos" {
-            return Reply(status: 200, json: #"{"items":[{"id":"aaaaaaaaaaa","contentDetails":{"duration":"PT180S"},"snippet":{"liveBroadcastContent":"none"}},{"id":"bbbbbbbbbbb","contentDetails":{"duration":"PT181S"},"snippet":{"liveBroadcastContent":"none"}},{"id":"ccccccccccc","contentDetails":{"duration":"P1DT1H"},"snippet":{"liveBroadcastContent":"none"}}]}"#)
+            return Reply(status: 200, json: #"{"items":[{"id":"aaaaaaaaaaa","contentDetails":{"duration":"PT180S"},"snippet":{"liveBroadcastContent":"none","publishedAt":"2026-01-03T12:00:00Z"}},{"id":"bbbbbbbbbbb","contentDetails":{"duration":"PT181S"},"snippet":{"liveBroadcastContent":"none","publishedAt":"2026-01-01T12:00:00.000Z"}},{"id":"ccccccccccc","contentDetails":{"duration":"P1DT1H"},"snippet":{"liveBroadcastContent":"none","publishedAt":"2026-01-04T12:00:00Z"}}]}"#)
         }
         return Reply(status: 500, json: "{}")
     }
@@ -167,8 +167,12 @@ private func testPaginationAndUploads() async throws {
     try check(account.syncSucceeded && account.channels.count == 2, "Two pages must be combined and deduplicated")
     try check(account.connectedChannel == "My channel", "The authorized channel name must be shown")
     try check(MockURLProtocol.requests().filter { $0.url?.path == "/youtube/v3/subscriptions" }.count == 2, "Both pages must be requested")
+    let skipped = await account.syncIfNeeded()
+    try check(!skipped && MockURLProtocol.requests().filter { $0.url?.path == "/youtube/v3/subscriptions" }.count == 2, "Foreground refresh must not repeat a recent sync")
     await account.loadUploads(for: [account.channels[0]])
-    try check(account.uploads.map(\.id) == ["bbbbbbbbbbb", "ccccccccccc"], "Recent uploads must sort newest first and exclude the three-minute item")
+    try check(account.uploads.map(\.id) == ["ccccccccccc", "bbbbbbbbbbb"], "Uploads must sort by video publication rather than playlist addition date and exclude the three-minute item")
+    let playlistRequest = MockURLProtocol.requests().first { $0.url?.path == "/youtube/v3/playlistItems" }
+    try check(URLComponents(url: playlistRequest!.url!, resolvingAgainstBaseURL: false)?.queryItems?.contains(URLQueryItem(name: "maxResults", value: "20")) == true, "Fetch enough playlist items to allow for Shorts")
     let restored = bed.makeAccount()
     try check(restored.signedIn && restored.hasRefreshToken, "A new account instance must restore credentials from its store")
 }

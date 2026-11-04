@@ -152,6 +152,8 @@ struct FocusScreen: View {
     @State private var input = ""
     @State private var showInfo = false
     @State private var selectedTopic = "All"
+    @State private var recommendationOrder = FocusRecommendations.Order.recommended
+    @State private var uploadOrder = FocusRecommendations.Order.newest
     @StateObject private var discovery = FocusDiscovery()
     @StateObject private var account = FocusYouTubeAccount()
     @AppStorage("focus.subscriptionSelection.v1") private var selectedChannelIDs = ""
@@ -193,17 +195,14 @@ struct FocusScreen: View {
             }
             .alert("Focus Tube", isPresented: Binding(get: { browser.message != nil }, set: { if !$0 { browser.message = nil } })) { Button("OK") { browser.message = nil } } message: { Text(browser.message ?? "") }
             .task {
-                if account.signedIn {
-                    await account.sync()
-                    if account.syncSucceeded { await loadSelectedUploads() }
-                }
+                if await account.syncIfNeeded() { await loadSelectedUploads() }
                 await discovery.refreshIfNeeded()
                 while !Task.isCancelled {
                     try? await Task.sleep(nanoseconds: 1_800_000_000_000)
                     guard !Task.isCancelled else { break }
                     if scenePhase == .active {
                         await discovery.refreshIfNeeded()
-                        if account.signedIn { await account.sync(); if account.syncSucceeded { await loadSelectedUploads() } }
+                        if await account.syncIfNeeded() { await loadSelectedUploads() }
                     }
                 }
             }
@@ -211,7 +210,7 @@ struct FocusScreen: View {
                 if phase == .active {
                     Task {
                         await discovery.refreshIfNeeded()
-                        if account.signedIn { await account.sync(); if account.syncSucceeded { await loadSelectedUploads() } }
+                        if await account.syncIfNeeded() { await loadSelectedUploads() }
                     }
                 }
             }
@@ -239,7 +238,8 @@ struct FocusScreen: View {
         let items = discovery.videos.isEmpty ? FocusRecommendations.videos : discovery.videos
         let filtered = selectedTopic == "All" ? items : items.filter { $0.topic == selectedTopic }
         let names = account.channels.filter { selectedIDs.contains($0.id) }.map(\.title)
-        return FocusRecommendations.prioritize(filtered, selectedChannelNames: names)
+        let preferred = FocusRecommendations.prioritize(filtered, selectedChannelNames: names)
+        return FocusRecommendations.sortByPublication(preferred, order: recommendationOrder, date: { $0.publishedAt })
     }
 
     private var startScreen: some View {
@@ -285,9 +285,17 @@ struct FocusScreen: View {
                             Button("Refresh") { Task { await account.sync(); if account.syncSucceeded { await loadSelectedUploads() } } }.buttonStyle(.bordered).disabled(account.busy)
                             if account.busy { ProgressView().controlSize(.small) }
                         }
-                        ForEach(account.uploads) { video in
+                        Picker("Sort uploads", selection: $uploadOrder) {
+                            Text("Newest").tag(FocusRecommendations.Order.newest)
+                            Text("Oldest").tag(FocusRecommendations.Order.oldest)
+                        }.pickerStyle(.menu)
+                        if !account.uploads.isEmpty {
+                            Text("Up to 60 recent uploads. Sorting applies to this list; unknown publication dates appear last.")
+                                .font(.caption).foregroundStyle(.secondary)
+                        }
+                        ForEach(FocusRecommendations.sortByPublication(account.uploads, order: uploadOrder, date: { $0.publishedAt })) { video in
                             Button { browser.open(URL(string: "https://m.youtube.com/watch?v=" + video.id)!) } label: {
-                                recommendationRow(FocusRecommendation(id: video.id, title: video.title, channel: video.channel, topic: "Computing", reason: "New from a selected subscription · " + video.publishedAt.formatted(date: .abbreviated, time: .omitted)))
+                                recommendationRow(FocusRecommendation(id: video.id, title: video.title, channel: video.channel, topic: "Computing", reason: "From a selected subscription", publishedAt: video.publishedAt))
                             }.buttonStyle(.plain)
                         }
                         Button("Disconnect subscriptions", role: .destructive) { account.signOut(); selectedChannelIDs = "" }.font(.footnote)
@@ -346,6 +354,11 @@ struct FocusScreen: View {
                         Text("Offline selection · \(visibleVideos.count) videos").font(.caption).foregroundStyle(.secondary)
                     }
                     if let notice = discovery.notice { Text(notice).font(.caption).foregroundStyle(.secondary) }
+                    Picker("Sort recommendations", selection: $recommendationOrder) {
+                        ForEach(FocusRecommendations.Order.allCases) { order in Text(order.rawValue).tag(order) }
+                    }.pickerStyle(.menu)
+                    Text("Sorts the videos currently loaded. Videos with unknown publication dates appear last.")
+                        .font(.caption).foregroundStyle(.secondary)
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 8) {
                             ForEach(topics, id: \.self) { topic in
@@ -386,6 +399,11 @@ struct FocusScreen: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(video.title).font(.subheadline.weight(.semibold)).lineLimit(3).multilineTextAlignment(.leading)
                 Text(video.channel).font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                if let date = video.publishedAt {
+                    Text("Published \(date.formatted(date: .abbreviated, time: .omitted))").font(.caption2).foregroundStyle(.secondary)
+                } else {
+                    Text("Publication date unavailable").font(.caption2).foregroundStyle(.secondary)
+                }
                 Text(video.reason).font(.caption2).foregroundStyle(FocusTheme.accent).lineLimit(2).multilineTextAlignment(.leading)
             }.frame(maxWidth: .infinity, alignment: .leading)
         }.padding(10).frame(maxWidth: .infinity, alignment: .leading).background(FocusTheme.surface, in: RoundedRectangle(cornerRadius: FocusTheme.corner))

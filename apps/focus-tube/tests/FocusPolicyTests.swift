@@ -30,6 +30,19 @@ import Foundation
         precondition(FocusRecommendations.prioritize(items, selectedChannelNames: ["  example channel\n"]).map(\.id) == [a.id, c.id, b.id])
         precondition(FocusRecommendations.prioritize(items, selectedChannelNames: ["example"]).map(\.id) == [b.id, a.id, c.id])
         precondition(FocusRecommendations.prioritize(items, selectedChannelNames: [" "]).map(\.id) == [b.id, a.id, c.id])
+        let old = FocusRecommendations.publishedDate("2020-01-01T12:00:00Z")!
+        let recent = FocusRecommendations.publishedDate("2026-01-01T12:00:00.000Z")!
+        precondition(FocusRecommendations.publishedDate("not-a-date") == nil)
+        var datedA = a; datedA.publishedAt = old
+        var datedB = b; datedB.publishedAt = recent
+        let dated = [c, datedA, datedB]
+        precondition(FocusRecommendations.sortByPublication(dated, order: .recommended, date: { $0.publishedAt }).map(\.id) == [c.id, a.id, b.id])
+        precondition(FocusRecommendations.sortByPublication(dated, order: .newest, date: { $0.publishedAt }).map(\.id) == [b.id, a.id, c.id])
+        precondition(FocusRecommendations.sortByPublication(dated, order: .oldest, date: { $0.publishedAt }).map(\.id) == [a.id, b.id, c.id])
+        var sameDate = c; sameDate.publishedAt = old
+        precondition(FocusRecommendations.sortByPublication([sameDate, datedA], order: .newest, date: { $0.publishedAt }).map(\.id) == [c.id, a.id])
+        let cached = #"{"id":"aaaaaaaaaaa","title":"a","channel":"Example Channel","topic":"Computing","reason":"test"}"#.data(using: .utf8)!
+        precondition((try! JSONDecoder().decode(FocusRecommendation.self, from: cached)).publishedAt == nil)
         print("Native URL policy: search, video links, Shorts, auth allowlist and hostile URLs passed")
     }
 }

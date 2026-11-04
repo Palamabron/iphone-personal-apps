@@ -11,6 +11,7 @@ struct FocusRecommendation: Identifiable, Codable {
     let channel: String
     let topic: String
     let reason: String
+    var publishedAt: Date? = nil
 
     var url: URL { URL(string: "https://m.youtube.com/watch?v=" + id)! }
 }
@@ -25,6 +26,33 @@ struct FocusChannel: Identifiable {
 
 enum FocusRecommendations {
     static let topics = ["AI & ML", "Science & math", "Computing", "Startups & economics"]
+
+    enum Order: String, CaseIterable, Identifiable {
+        case recommended = "Recommended", newest = "Newest", oldest = "Oldest"
+        var id: String { rawValue }
+    }
+
+    static func publishedDate(_ value: String?) -> Date? {
+        guard let value else { return nil }
+        let formatter = ISO8601DateFormatter()
+        if let date = formatter.date(from: value) { return date }
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return formatter.date(from: value)
+    }
+
+    // Unknown dates always remain at the end, with stable ordering for ties.
+    static func sortByPublication<T>(_ values: [T], order: Order, date: (T) -> Date?) -> [T] {
+        guard order != .recommended else { return values }
+        return values.enumerated().sorted { left, right in
+            switch (date(left.element), date(right.element)) {
+            case let (a?, b?):
+                return a == b ? left.offset < right.offset : (order == .newest ? a > b : a < b)
+            case (_?, nil): return true
+            case (nil, _?): return false
+            case (nil, nil): return left.offset < right.offset
+            }
+        }.map(\.element)
+    }
 
     // HackerTube results contain display names, not verified YouTube channel IDs.
     // Match locally and keep each partition in its original source order.

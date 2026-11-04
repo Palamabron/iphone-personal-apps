@@ -39,6 +39,10 @@ final class FocusDiscovery: ObservableObject {
             Source(area: "math-theory", topic: "Science & math"),
             Source(area: "software", topic: "Computing"),
             Source(area: "business-economics", topic: "Startups & economics"),
+            Source(area: "ai-data", topic: "AI & ML", sort: "date"),
+            Source(area: "math-theory", topic: "Science & math", sort: "date"),
+            Source(area: "software", topic: "Computing", sort: "date"),
+            Source(area: "business-economics", topic: "Startups & economics", sort: "date"),
             Source(query: "Google DeepMind", topic: "AI & ML"),
             Source(query: "Veritasium", topic: "Science & math"),
             Source(query: "Computerphile", topic: "Computing"),
@@ -79,21 +83,23 @@ final class FocusDiscovery: ObservableObject {
         let area: String?
         let query: String?
         let topic: String
-        init(area: String, topic: String) { self.area = area; self.query = nil; self.topic = topic }
-        init(query: String, topic: String) { self.area = nil; self.query = query; self.topic = topic }
+        let sort: String
+        init(area: String, topic: String, sort: String = "recent") { self.area = area; self.query = nil; self.topic = topic; self.sort = sort }
+        init(query: String, topic: String) { self.area = nil; self.query = query; self.topic = topic; self.sort = "recent" }
     }
     private struct Video: Decodable {
         let vid: String
         let title: String
         let channel: String
         let duration_s: Int?
+        let published: String?
     }
     private struct SearchResponse: Decodable { let results: [Video] }
 
     nonisolated private static func fetch(_ source: Source) async -> [FocusRecommendation] {
         var components = URLComponents(string: source.area == nil ? "https://hackertube.org/api/search" : "https://hackertube.org/api/list")!
         if let area = source.area {
-            components.queryItems = [URLQueryItem(name: "area", value: area), URLQueryItem(name: "sort", value: "recent"), URLQueryItem(name: "offset", value: "0"), URLQueryItem(name: "n", value: "12")]
+            components.queryItems = [URLQueryItem(name: "area", value: area), URLQueryItem(name: "sort", value: source.sort), URLQueryItem(name: "offset", value: "0"), URLQueryItem(name: "n", value: "12")]
         } else if let query = source.query {
             components.queryItems = [URLQueryItem(name: "q", value: query)]
         }
@@ -113,7 +119,7 @@ final class FocusDiscovery: ObservableObject {
                       !video.title.isEmpty, !video.channel.isEmpty,
                       source.query == nil || video.channel.caseInsensitiveCompare(source.query!) == .orderedSame else { return nil }
                 return FocusRecommendation(id: video.vid, title: String(video.title.prefix(200)), channel: String(video.channel.prefix(100)), topic: source.topic,
-                    reason: source.query == nil ? "Recommended on Hacker News" : "From a selected channel")
+                    reason: source.query == nil ? "Recommended on Hacker News" : "From a preset channel", publishedAt: FocusRecommendations.publishedDate(video.published))
             }
         } catch { return [] }
     }
