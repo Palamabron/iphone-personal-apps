@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-04T14:44:54.988Z",
+  "generatedAt": "2026-11-04T14:47:56.139Z",
   "textLineEndings": "LF",
   "files": [
     {
@@ -49,8 +49,8 @@
     },
     {
       "path": "apps/focus-tube/ios/FocusApp.swift",
-      "bytes": 48823,
-      "sha256": "0b0e7ae8c0b5f7120c6f9230da332d0874eca3c3daf1d658d5b4dcfa5a346a76"
+      "bytes": 48929,
+      "sha256": "7afb88da6303baa26838e22a802f55ee27dc2c8073a12eb224ca97fcfb5fd295"
     },
     {
       "path": "apps/focus-tube/ios/FocusDiagnostics.swift",

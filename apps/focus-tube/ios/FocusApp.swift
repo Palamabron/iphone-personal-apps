@@ -576,7 +576,7 @@ struct FocusScreen: View {
     private var accountInformation: some View {
         NavigationStack {
             List {
-                Section("Subscription connection") {
+                Section {
                     if !account.configured {
                         Text("Google sign-in is not configured for this build.")
                     } else if account.signedIn {
@@ -611,15 +611,19 @@ struct FocusScreen: View {
                     if let notice = account.notice {
                         Text(notice).font(.footnote).foregroundStyle(.secondary)
                     }
+                } header: {
+                    Text("Subscription connection")
                 } footer: {
                     Text("This connection reads subscriptions and recent videos. Choose channels on the Discover screen.")
                 }
-                Section("YouTube playback") {
+                Section {
                     Text("Playback uses a separate YouTube session. Connecting Google above does not sign the player into YouTube or confirm Premium.")
                     Button("Open YouTube account page") {
                         showAccount = false
                         browser.open(URL(string: "https://m.youtube.com/channel_switcher")!)
                     }
+                } header: {
+                    Text("YouTube playback")
                 } footer: {
                     Text("YouTube controls this page and sign-in; it may not work inside Focus Tube.")
                 }
