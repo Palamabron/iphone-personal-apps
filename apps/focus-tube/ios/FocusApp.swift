@@ -4,6 +4,7 @@ import UIKit
 import SafariServices
 import CoreTransferable
 import UniformTypeIdentifiers
+import AVFAudio
 
 private struct FocusDiagnosticTextFile: Transferable {
     let report: String
@@ -65,6 +66,13 @@ final class FocusBrowser: NSObject, ObservableObject, WKNavigationDelegate, WKUI
         webView = WKWebView(frame: .zero, configuration: configuration)
         super.init()
         FocusDiagnostics.shared.record(.appStarted)
+        do {
+            // Configure without activating or interrupting other audio at launch.
+            try AVAudioSession.sharedInstance().setCategory(.playback, mode: .moviePlayback)
+        } catch {
+            FocusDiagnostics.shared.record(.audioSessionFailed, code: .other)
+            message = "Audio settings could not be configured. Background playback may not work."
+        }
         webView.navigationDelegate = self
         webView.uiDelegate = self
         webView.allowsBackForwardNavigationGestures = true
@@ -301,7 +309,7 @@ struct FocusScreen: View {
                 NavigationStack { ScrollView { VStack(alignment: .leading, spacing: 18) {
                     Text("About Focus Tube").font(.title.bold())
                     Text("Search YouTube without Shorts or an endless feed. Results load 15 at a time.")
-                    Text("YouTube handles playback and sign-in. Google may block sign-in here. Premium, picture in picture and background playback need testing on your device. Offline playback is unavailable.")
+                    Text("YouTube handles playback and sign-in. Background audio is experimental and may stop when the screen locks. Premium and background playback need testing on your device. Offline playback is unavailable.")
                     Text("Subscription sync and video playback use separate sign-ins. If a video asks you to sign in, you can copy its link and paste it into Safari. Sign in to YouTube there if needed. Focus Tube's filter does not run in Safari.").font(.footnote)
                     Button("Copy current video link") {
                         copyVideoStatus = browser.copyCurrentVideoLink() ? "Link copied. Paste it into Safari." : "Open a YouTube video in Focus Tube first."

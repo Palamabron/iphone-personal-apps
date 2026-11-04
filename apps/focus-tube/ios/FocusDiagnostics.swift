@@ -11,7 +11,7 @@ enum FocusDiagnosticEvent: String, Codable, CaseIterable, Sendable {
     case freshSearchStarted, freshSearchSucceeded, freshSearchFailed
     case recommendationsStarted, recommendationsSucceeded, recommendationsPartial, recommendationsFailed
     case navigationBlocked, pageLoaded, pageLoadFailed, webContentTerminated
-    case filterReady, filterUnavailable, premiumTestOpened
+    case filterReady, filterUnavailable, premiumTestOpened, audioSessionFailed
 }
 
 // Codes are deliberately broad and contain no raw NSError data or HTTP body.

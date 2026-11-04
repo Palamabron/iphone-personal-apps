@@ -26,7 +26,8 @@ for argument in sys.argv[1:]:
         extensions = []
         if 'FocusTubeNative' in package.name:
             assert info['CFBundleIdentifier'] == 'dev.palamabron.focustube.native'
-            assert info['CFBundleShortVersionString'] == '0.5.4'
+            assert info['CFBundleShortVersionString'] == '0.5.5'
+            assert 'audio' in info.get('UIBackgroundModes', [])
             assert not any('.appex/' in name for name in names)
             code = archive.read(app + '/filter.js').decode()
             assert 'installFocusTube' in code and 'data-ft-active' in code
