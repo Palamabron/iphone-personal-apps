@@ -67,6 +67,7 @@ private final class TestBed {
     var stored: Data?
     var challenge: String?
     var tokenRequests: [URLRequest] = []
+    var now = Date()
     let client = "12345-test.apps.googleusercontent.com"
     let oauthScope = "https://www.googleapis.com/auth/youtube.readonly"
 
@@ -93,6 +94,7 @@ private final class TestBed {
                 return callback.url!
             },
             observeTokenRequest: { [unowned self] in self.tokenRequests.append($0) },
+            now: { [unowned self] in self.now },
             read: { [unowned self] in self.stored },
             write: { [unowned self] in self.stored = $0 },
             delete: { [unowned self] in self.stored = nil }
@@ -149,7 +151,7 @@ private func testPaginationAndUploads() async throws {
             return Reply(status: 200, json: "{\"items\":[\(items)]}")
         }
         if path == "/youtube/v3/videos" {
-            return Reply(status: 200, json: #"{"items":[{"id":"aaaaaaaaaaa","contentDetails":{"duration":"PT180S"},"snippet":{"liveBroadcastContent":"none"}},{"id":"bbbbbbbbbbb","contentDetails":{"duration":"PT181S"},"snippet":{"liveBroadcastContent":"none"}},{"id":"ccccccccccc","contentDetails":{"duration":"P1DT1H"},"snippet":{"liveBroadcastContent":"none"}}]}"#)
+            return Reply(status: 200, json: #"{"items":[{"id":"aaaaaaaaaaa","contentDetails":{"duration":"PT180S"},"snippet":{"liveBroadcastContent":"none","publishedAt":"2026-01-03T12:00:00Z"}},{"id":"bbbbbbbbbbb","contentDetails":{"duration":"PT181S"},"snippet":{"liveBroadcastContent":"none","publishedAt":"2026-01-01T12:00:00.000Z"}},{"id":"ccccccccccc","contentDetails":{"duration":"P1DT1H"},"snippet":{"liveBroadcastContent":"none","publishedAt":"2026-01-04T12:00:00Z"}}]}"#)
         }
         return Reply(status: 500, json: "{}")
     }
@@ -167,8 +169,12 @@ private func testPaginationAndUploads() async throws {
     try check(account.syncSucceeded && account.channels.count == 2, "Two pages must be combined and deduplicated")
     try check(account.connectedChannel == "My channel", "The authorized channel name must be shown")
     try check(MockURLProtocol.requests().filter { $0.url?.path == "/youtube/v3/subscriptions" }.count == 2, "Both pages must be requested")
+    let skipped = await account.syncIfNeeded()
+    try check(!skipped && MockURLProtocol.requests().filter { $0.url?.path == "/youtube/v3/subscriptions" }.count == 2, "Foreground refresh must not repeat a recent sync")
     await account.loadUploads(for: [account.channels[0]])
-    try check(account.uploads.map(\.id) == ["bbbbbbbbbbb", "ccccccccccc"], "Recent uploads must sort newest first and exclude the three-minute item")
+    try check(account.uploads.map(\.id) == ["ccccccccccc", "bbbbbbbbbbb"], "Uploads must sort by video publication rather than playlist addition date and exclude the three-minute item")
+    let playlistRequest = MockURLProtocol.requests().first { $0.url?.path == "/youtube/v3/playlistItems" }
+    try check(URLComponents(url: playlistRequest!.url!, resolvingAgainstBaseURL: false)?.queryItems?.contains(URLQueryItem(name: "maxResults", value: "20")) == true, "Fetch enough playlist items to allow for Shorts")
     let restored = bed.makeAccount()
     try check(restored.signedIn && restored.hasRefreshToken, "A new account instance must restore credentials from its store")
 }
@@ -185,6 +191,101 @@ private func testPaginationCycle() async throws {
     await account.signIn(); await account.sync()
     try check(!account.syncSucceeded && account.notice != nil, "Cyclic pagination must fail rather than loop or publish partial data")
     try check(MockURLProtocol.requests().filter { $0.url?.path == "/youtube/v3/subscriptions" }.count == 2, "Pagination must stop on a repeated token")
+}
+
+// The UI retries a complete or partial upload failure after a bounded delay,
+// while successful refreshes retain the longer quota-saving interval.
+@MainActor
+private func testAutomaticRetry() async throws {
+    func configure(_ failure: String?) {
+        MockURLProtocol.configure { request in
+            let path = request.url?.path ?? ""
+            if path == "/token" { return Reply(status: 200, json: tokenResponse) }
+            if path == "/youtube/v3/channels", query(request, "mine") == "true" { return Reply(status: 200, json: ownResponse) }
+            if path == "/youtube/v3/subscriptions" {
+                if failure == "subscriptions" { return Reply(status: 500, json: "{}") }
+                return Reply(status: 200, json: "{\"items\":[{\"snippet\":{\"title\":\"A\",\"resourceId\":{\"channelId\":\"\(a)\"}}},{\"snippet\":{\"title\":\"B\",\"resourceId\":{\"channelId\":\"\(b)\"}}}]}")
+            }
+            if path == "/youtube/v3/channels" { return Reply(status: 200, json: "{\"items\":[{\"id\":\"\(a)\",\"contentDetails\":{\"relatedPlaylists\":{\"uploads\":\"UUa\"}}},{\"id\":\"\(b)\",\"contentDetails\":{\"relatedPlaylists\":{\"uploads\":\"UUb\"}}}]}") }
+            if path == "/youtube/v3/playlistItems" {
+                if failure == "partial", query(request, "playlistId") == "UUb" { return Reply(status: 500, json: "{}") }
+                return Reply(status: 200, json: #"{"items":[{"snippet":{"title":"Video","channelTitle":"A","publishedAt":"2026-01-01T12:00:00Z","resourceId":{"videoId":"aaaaaaaaaaa"}}}]}"#)
+            }
+            if path == "/youtube/v3/videos" {
+                if failure == "uploads" { return Reply(status: 500, json: "{}") }
+                return Reply(status: 200, json: #"{"items":[{"id":"aaaaaaaaaaa","contentDetails":{"duration":"PT181S"},"snippet":{"liveBroadcastContent":"none","publishedAt":"2026-01-01T12:00:00Z"}}]}"#)
+            }
+            return Reply(status: 500, json: "{}")
+        }
+    }
+
+    for failure in ["subscriptions", "uploads", "partial"] {
+        let bed = TestBed()
+        configure(failure)
+        let account = bed.makeAccount()
+        await account.signIn()
+        await account.sync()
+        if account.syncSucceeded { await account.loadUploads(for: account.channels) }
+        try check(account.notice != nil, "The \(failure) failure should be visible")
+        configure(nil)
+        bed.now.addTimeInterval(299)
+        let tooSoon = await account.syncIfNeeded()
+        try check(!tooSoon && MockURLProtocol.requests().isEmpty, "The \(failure) retry must wait at least five minutes")
+        bed.now.addTimeInterval(2)
+        let retried = await account.syncIfNeeded()
+        try check(retried, "The \(failure) failure should retry after five minutes")
+        await account.loadUploads(for: account.channels)
+        try check(account.uploads.count == 1 && account.notice == nil, "A successful retry should restore uploads")
+        configure(nil)
+        bed.now.addTimeInterval(5 * 60)
+        let afterSuccess = await account.syncIfNeeded()
+        try check(!afterSuccess && MockURLProtocol.requests().isEmpty, "A successful refresh should use the thirty-minute interval")
+    }
+
+    let bed = TestBed()
+    configure(nil)
+    let account = bed.makeAccount()
+    await account.signIn(); await account.sync()
+    try check(account.syncSucceeded, "The first sync must succeed")
+    bed.now.addTimeInterval(30 * 60 + 1)
+    configure("subscriptions")
+    let failed = await account.syncIfNeeded()
+    try check(!failed && !account.syncSucceeded, "A later failure must not retain the previous success")
+    configure(nil)
+    bed.now.addTimeInterval(299)
+    let tooSoon = await account.syncIfNeeded()
+    try check(!tooSoon && MockURLProtocol.requests().isEmpty, "A later failure must still observe the retry delay")
+    bed.now.addTimeInterval(2)
+    let recovered = await account.syncIfNeeded()
+    try check(recovered && account.syncSucceeded, "A later failure must retry successfully after the delay")
+    await account.loadUploads(for: account.channels)
+
+    let repeatedBed = TestBed()
+    configure("partial")
+    let repeated = repeatedBed.makeAccount()
+    await repeated.signIn(); await repeated.sync(); await repeated.loadUploads(for: repeated.channels)
+    for delay in [300, 600, 1200, 1800, 1800] {
+        configure("partial")
+        repeatedBed.now.addTimeInterval(TimeInterval(delay - 1))
+        let early = await repeated.syncIfNeeded()
+        try check(!early && MockURLProtocol.requests().isEmpty, "Repeated failures must back off before retrying")
+        repeatedBed.now.addTimeInterval(2)
+        let due = await repeated.syncIfNeeded()
+        try check(due, "Repeated failures should retry when backoff expires")
+        await repeated.loadUploads(for: repeated.channels)
+        try check(repeated.notice != nil, "The partial failure must remain visible")
+    }
+    configure(nil)
+    repeatedBed.now.addTimeInterval(1801)
+    let retryAfterBackoff = await repeated.syncIfNeeded()
+    try check(retryAfterBackoff, "A full refresh must retry after the capped delay")
+    await repeated.loadUploads(for: repeated.channels)
+    configure("partial")
+    await repeated.loadUploads(for: repeated.channels)
+    configure(nil)
+    repeatedBed.now.addTimeInterval(301)
+    let resetDelay = await repeated.syncIfNeeded()
+    try check(resetDelay, "A full success must reset later failures to the initial delay")
 }
 
 @MainActor
@@ -297,6 +398,7 @@ struct AccountIntegrationTestApp: App {
                     try await testInvalidCallbacks()
                     try await testPaginationAndUploads()
                     try await testPaginationCycle()
+                    try await testAutomaticRetry()
                     try await testExpiredToken()
                     try await testRefreshTokenSuccess()
                     try await testSignOutDuringRequest()
