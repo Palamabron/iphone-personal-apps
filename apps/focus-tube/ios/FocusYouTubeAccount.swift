@@ -56,6 +56,10 @@ final class FocusYouTubeAccount: NSObject, ObservableObject, ASWebAuthentication
     @Published private(set) var freshLoading = false
     private let freshCacheKey = "focus.youtube.discovery.v1"
     private let freshAttemptKey = "focus.youtube.discovery.attempt.v1"
+    private let freshAttemptQueryVersionKey = "focus.youtube.discovery.attempt.query-version.v1"
+    // Bump when the fixed queries or their admission rules change. Old cache
+    // remains visible after filtering but does not suppress the new search.
+    private static let freshQueryVersion = 2
     // Kept across sign-out: reconnecting must not bypass the shared API budget.
     private let freshBudgetAttemptsKey = "focus.youtube.discovery.search-budget.v1"
     private let freshSuccessInterval: TimeInterval = 24 * 60 * 60
@@ -70,6 +74,7 @@ final class FocusYouTubeAccount: NSObject, ObservableObject, ASWebAuthentication
         let videos: [FocusRecommendation]
         let updatedAt: Date
         let partial: Bool
+        let queryVersion: Int?
     }
 
     private var freshCacheStore: UserDefaults {
@@ -257,9 +262,15 @@ final class FocusYouTubeAccount: NSObject, ObservableObject, ASWebAuthentication
             freshCacheStore.removeObject(forKey: freshCacheKey)
             return
         }
-        freshVideos = Array(cached.videos.filter {
-            FocusPolicy.validID($0.id) && FocusRecommendations.topics.contains($0.topic)
-                && !$0.title.isEmpty && !$0.channel.isEmpty && $0.publishedAt != nil
+        freshVideos = Array(cached.videos.compactMap { video -> FocusRecommendation? in
+            guard FocusPolicy.validID(video.id), !video.title.isEmpty, !video.channel.isEmpty,
+                  video.publishedAt != nil else { return nil }
+            let matchingTopics = video.allTopics.filter { FocusRecommendations.freshSearchTitleMatches(video.title, topic: $0) }
+            guard let first = matchingTopics.first else { return nil }
+            return FocusRecommendation(id: video.id, title: video.title, channel: video.channel,
+                topic: first, reason: video.reason, publishedAt: video.publishedAt,
+                shelfLife: video.shelfLife, hnRecommenders: video.hnRecommenders,
+                additionalTopics: Array(matchingTopics.dropFirst()))
         }.prefix(60))
         freshLastUpdated = cached.updatedAt
         if cached.partial { freshNotice = "Some YouTube searches could not be refreshed." }
@@ -305,7 +316,7 @@ final class FocusYouTubeAccount: NSObject, ObservableObject, ASWebAuthentication
             freshNotice = budgetNotice ?? (cache?.partial == true ? "Some YouTube searches could not be refreshed." : nil)
         }
         if !force {
-            if let cache, cache.updatedAt <= clock,
+            if let cache, cache.queryVersion == Self.freshQueryVersion, cache.updatedAt <= clock,
                clock.timeIntervalSince(cache.updatedAt) < (cache.partial ? freshRetryInterval : freshSuccessInterval) {
                 if freshNotice == "Connect Google to refresh recent YouTube discoveries."
                     || freshNotice == "YouTube search is already in progress."
@@ -314,7 +325,8 @@ final class FocusYouTubeAccount: NSObject, ObservableObject, ASWebAuthentication
                 }
                 return
             }
-            if let attempt = freshCacheStore.object(forKey: freshAttemptKey) as? Date,
+            if freshCacheStore.integer(forKey: freshAttemptQueryVersionKey) == Self.freshQueryVersion,
+               let attempt = freshCacheStore.object(forKey: freshAttemptKey) as? Date,
                attempt <= clock, clock.timeIntervalSince(attempt) < freshRetryInterval { return }
         }
         if let budgetNotice { freshNotice = budgetNotice; return }
@@ -327,10 +339,11 @@ final class FocusYouTubeAccount: NSObject, ObservableObject, ASWebAuthentication
             guard requestGeneration == generation else { return }
             freshCacheStore.set(searchAttempts + [now], forKey: freshBudgetAttemptsKey)
             freshCacheStore.set(now, forKey: freshAttemptKey)
+            freshCacheStore.set(Self.freshQueryVersion, forKey: freshAttemptQueryVersionKey)
             let after = ISO8601DateFormatter().string(from: now.addingTimeInterval(-365 * 24 * 60 * 60))
             let searches = [
                 ("machine learning", "AI & ML"), ("science research", "Science & math"),
-                ("computer science", "Computing"), ("startup entrepreneurship", "Startups & economics")
+                ("computer science", "Computing"), ("software engineering", "Computing")
             ]
             let network = self.network
             // Run only four fixed queries concurrently. The account remains busy,
@@ -348,7 +361,8 @@ final class FocusYouTubeAccount: NSObject, ObservableObject, ASWebAuthentication
                             ], token: token, network: network, timeout: 12)
                             let items: [FreshCandidate] = result.items.prefix(25).compactMap { item in
                                 guard let id = item.id.videoId, FocusPolicy.validID(id),
-                                      !item.snippet.title.isEmpty, !item.snippet.channelTitle.isEmpty else { return nil }
+                                      !item.snippet.title.isEmpty, !item.snippet.channelTitle.isEmpty,
+                                      FocusRecommendations.freshSearchTitleMatches(item.snippet.title, topic: search.1) else { return nil }
                                 return FreshCandidate(id: id, title: String(item.snippet.title.prefix(200)),
                                     channel: String(item.snippet.channelTitle.prefix(100)), topic: search.1)
                             }
@@ -442,7 +456,7 @@ final class FocusYouTubeAccount: NSObject, ObservableObject, ASWebAuthentication
             }
             let values = Array(found.prefix(60))
             let updated = now
-            let cached = FreshCache(videos: values, updatedAt: updated, partial: failures > 0)
+            let cached = FreshCache(videos: values, updatedAt: updated, partial: failures > 0, queryVersion: Self.freshQueryVersion)
             if let data = try? JSONEncoder().encode(cached) { freshCacheStore.set(data, forKey: freshCacheKey) }
             freshVideos = values
             freshLastUpdated = updated
@@ -665,6 +679,7 @@ final class FocusYouTubeAccount: NSObject, ObservableObject, ASWebAuthentication
         freshVideos = []; freshLastUpdated = nil; freshNotice = nil
         freshCacheStore.removeObject(forKey: freshCacheKey)
         freshCacheStore.removeObject(forKey: freshAttemptKey)
+        freshCacheStore.removeObject(forKey: freshAttemptQueryVersionKey)
         deleteCredentials()
         notice = "Local API credentials removed. Playback sign-in is separate."
     }

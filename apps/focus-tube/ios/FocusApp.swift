@@ -103,6 +103,15 @@ final class FocusBrowser: NSObject, ObservableObject, WKNavigationDelegate, WKUI
         message = "Saved for later."
     }
     func remove(_ film: SavedFilm) { saved.removeAll { $0.id == film.id }; persist() }
+    var currentVideoLink: URL? {
+        guard !home, let url = webView.url else { return nil }
+        return FocusPolicy.videoLink(url)
+    }
+    func copyCurrentVideoLink() -> Bool {
+        guard let video = currentVideoLink else { return false }
+        UIPasteboard.general.url = video
+        return true
+    }
     func inspectPage() {
         guard !home, let url = webView.url, FocusPolicy.isYouTube(url) else {
             diagnostics = "Open the affected YouTube page and try again."
@@ -180,11 +189,11 @@ struct FocusWebView: UIViewRepresentable {
 // the app's filter or access the user's web session or page contents.
 private struct PremiumTestView: UIViewControllerRepresentable {
     @Binding var isPresented: Bool
-    private static let videoURL = URL(string: "https://m.youtube.com/watch?v=VMj-3S1tku0")!
+    let videoURL: URL
 
     func makeCoordinator() -> Coordinator { Coordinator(isPresented: $isPresented) }
     func makeUIViewController(context: Context) -> SFSafariViewController {
-        let controller = SFSafariViewController(url: Self.videoURL)
+        let controller = SFSafariViewController(url: videoURL)
         controller.delegate = context.coordinator
         return controller
     }
@@ -203,7 +212,10 @@ struct FocusScreen: View {
     @ObservedObject var browser: FocusBrowser
     @State private var input = ""
     @State private var showInfo = false
+    @State private var showAccount = false
     @State private var showPremiumTest = false
+    @State private var premiumTestURL = URL(string: "https://m.youtube.com/watch?v=VMj-3S1tku0")!
+    @State private var copyVideoStatus: String?
     @State private var selectedTopic = "All"
     @State private var recommendationOrder = FocusRecommendations.Order.recommended
     @State private var uploadOrder = FocusRecommendations.Order.newest
@@ -249,7 +261,7 @@ struct FocusScreen: View {
                         Spacer()
                         Button { browser.webView.reload() } label: { Image(systemName: "arrow.clockwise") }.accessibilityLabel("Refresh")
                         Spacer()
-                        Button { browser.open(URL(string: "https://m.youtube.com/channel_switcher")!) } label: { Image(systemName: "person.crop.circle") }.accessibilityLabel("YouTube account")
+                        Button { showAccount = true } label: { Image(systemName: "person.crop.circle") }.accessibilityLabel("Account information")
                     }
                 }
             }
@@ -290,12 +302,28 @@ struct FocusScreen: View {
                     Text("About Focus Tube").font(.title.bold())
                     Text("Search YouTube without Shorts or an endless feed. Results load 15 at a time.")
                     Text("YouTube handles playback and sign-in. Google may block sign-in here. Premium, picture in picture and background playback need testing on your device. Offline playback is unavailable.")
+                    Text("Subscription sync and video playback use separate sign-ins. If a video asks you to sign in, you can copy its link and paste it into Safari. Sign in to YouTube there if needed. Focus Tube's filter does not run in Safari.").font(.footnote)
+                    Button("Copy current video link") {
+                        copyVideoStatus = browser.copyCurrentVideoLink() ? "Link copied. Paste it into Safari." : "Open a YouTube video in Focus Tube first."
+                    }.buttonStyle(.bordered)
+                    if let copyVideoStatus { Text(copyVideoStatus).font(.footnote).foregroundStyle(.secondary) }
                     Text("Premium playback test").font(.headline)
                     Text("Opens one public video in a system browser view. Sign in to your Premium account there if needed and check your account status. Shorts and feed filtering do not work in this view. The system view may use a separate sign-in from Focus Tube.").font(.footnote)
+                    if let currentVideo = browser.currentVideoLink {
+                        Button("Test current video in system view") {
+                            Task {
+                                await browser.webView.pauseAllMediaPlayback()
+                                FocusDiagnostics.shared.record(.premiumTestOpened)
+                                premiumTestURL = currentVideo
+                                showPremiumTest = true
+                            }
+                        }.buttonStyle(.bordered)
+                    }
                     Button("Open test video") {
                         Task {
                             await browser.webView.pauseAllMediaPlayback()
                             FocusDiagnostics.shared.record(.premiumTestOpened)
+                            premiumTestURL = URL(string: "https://m.youtube.com/watch?v=VMj-3S1tku0")!
                             showPremiumTest = true
                         }
                     }.buttonStyle(.bordered)
@@ -319,8 +347,9 @@ struct FocusScreen: View {
                     }
                     Text("Focus Tube \(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "unknown") test").font(.footnote)
                 }.padding(24) }.navigationTitle("About").toolbar { Button("Done") { showInfo = false } } }
-                    .sheet(isPresented: $showPremiumTest) { PremiumTestView(isPresented: $showPremiumTest).ignoresSafeArea() }
+                    .sheet(isPresented: $showPremiumTest) { PremiumTestView(isPresented: $showPremiumTest, videoURL: premiumTestURL).ignoresSafeArea() }
             }
+            .sheet(isPresented: $showAccount) { accountInformation }
             .sheet(isPresented: $showChannels) { subscriptionPicker }
             .sheet(isPresented: $showRecommendationSettings) { recommendationSettings }
         }
@@ -538,10 +567,66 @@ struct FocusScreen: View {
     }
 
     private var accountLink: some View {
-        Button { browser.open(URL(string: "https://m.youtube.com/channel_switcher")!) } label: {
+        Button { showAccount = true } label: {
             Label("Account", systemImage: "person.crop.circle")
                 .frame(maxWidth: .infinity, minHeight: 44)
         }.buttonStyle(.bordered).tint(.primary).font(.subheadline.weight(.medium))
+    }
+
+    private var accountInformation: some View {
+        NavigationStack {
+            List {
+                Section("Subscription connection") {
+                    if !account.configured {
+                        Text("Google sign-in is not configured for this build.")
+                    } else if account.signedIn {
+                        Label("Google connection saved", systemImage: "checkmark.circle")
+                        if let channel = account.connectedChannel {
+                            LabeledContent("YouTube channel", value: channel)
+                        } else {
+                            Text("Channel information is not available yet. Refresh the connection to check it.")
+                                .foregroundStyle(.secondary)
+                        }
+                        Button("Refresh connection") {
+                            Task { await account.sync(); if account.syncSucceeded { await loadSelectedUploads() } }
+                        }.disabled(account.busy)
+                        Button("Disconnect subscriptions", role: .destructive) {
+                            account.signOut()
+                            selectedChannelIDs = ""
+                        }.disabled(account.busy)
+                    } else {
+                        Text("Not connected to Google for subscriptions.")
+                        Button("Connect with Google") {
+                            Task {
+                                await account.signIn()
+                                if account.signInSucceeded {
+                                    await account.sync()
+                                    if account.syncSucceeded { await loadSelectedUploads() }
+                                    await account.refreshFreshVideosIfNeeded()
+                                }
+                            }
+                        }.disabled(account.busy)
+                    }
+                    if account.busy { ProgressView() }
+                    if let notice = account.notice {
+                        Text(notice).font(.footnote).foregroundStyle(.secondary)
+                    }
+                } footer: {
+                    Text("This connection reads subscriptions and recent videos. Choose channels on the Discover screen.")
+                }
+                Section("YouTube playback") {
+                    Text("Playback uses a separate YouTube session. Connecting Google above does not sign the player into YouTube or confirm Premium.")
+                    Button("Open YouTube account page") {
+                        showAccount = false
+                        browser.open(URL(string: "https://m.youtube.com/channel_switcher")!)
+                    }
+                } footer: {
+                    Text("YouTube controls this page and sign-in; it may not work inside Focus Tube.")
+                }
+            }
+            .navigationTitle("Account")
+            .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { showAccount = false } } }
+        }
     }
 
     private func recommendationRow(_ video: FocusRecommendation) -> some View {

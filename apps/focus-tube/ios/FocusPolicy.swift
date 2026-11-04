@@ -8,6 +8,12 @@ enum FocusPolicy {
     static func isShorts(_ url: URL) -> Bool {
         isYouTube(url) && url.path.lowercased().split(separator: "/").contains("shorts")
     }
+    static func videoLink(_ url: URL) -> URL? {
+        guard isYouTube(url), url.path == "/watch",
+              let id = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems?.first(where: { $0.name == "v" })?.value,
+              validID(id) else { return nil }
+        return URL(string: "https://m.youtube.com/watch?v=" + id)
+    }
     static func allowed(_ url: URL) -> Bool {
         if isYouTube(url) { return !isShorts(url) }
         return url.scheme == "https" && ["accounts.google.com", "consent.google.com", "consent.youtube.com"].contains(url.host?.lowercased() ?? "") && url.user == nil && url.password == nil && (url.port == nil || url.port == 443)

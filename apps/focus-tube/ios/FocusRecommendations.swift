@@ -99,6 +99,38 @@ struct FocusDiscoveryCache: Codable {
 enum FocusRecommendations {
     static let topics = ["AI & ML", "Science & math", "Computing", "Startups & economics"]
 
+    // Public YouTube searches can return unrelated videos, even with an English
+    // relevance hint. Require a recognisable topic in the title. This is a
+    // conservative heuristic, not language detection or a quality assessment;
+    // it must not filter explicitly selected subscriptions or HackerTube.
+    static func freshSearchTitleMatches(_ title: String, topic: String) -> Bool {
+        let terms: [String]
+        switch topic {
+        case "AI & ML":
+            terms = ["ai", "artificial intelligence", "machine learning", "deep learning", "neural", "llm", "llms", "language model", "transformer", "transformers", "sztuczna inteligencja", "uczenie maszynowe"]
+        case "Science & math":
+            terms = ["science", "scientific", "research", "physics", "quantum", "mathematics", "math", "maths", "biology", "chemistry", "astronomy", "neuroscience", "nauka", "badania", "fizyka", "matematyka"]
+        case "Computing":
+            terms = ["computer", "computing", "software", "programming", "programmer", "coding", "code", "algorithm", "algorithms", "cybersecurity", "operating system", "developer", "komputer", "programowanie", "algorytm"]
+        case "Startups & economics":
+            terms = ["startup", "startups", "start up", "entrepreneurship", "entrepreneur", "entrepreneurs", "venture capital", "venture funding", "economics", "economic", "economy", "ekonomia", "gospodarka", "przedsiebiorczosc"]
+        default:
+            return false
+        }
+        func words(_ text: String) -> [String] {
+            text.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: Locale(identifier: "en_US_POSIX"))
+                .components(separatedBy: CharacterSet.alphanumerics.inverted).filter { !$0.isEmpty }
+        }
+        let tokens = words(title)
+        return terms.contains { term in
+            let wanted = words(term)
+            guard !wanted.isEmpty, tokens.count >= wanted.count else { return false }
+            return (0...(tokens.count - wanted.count)).contains { start in
+                Array(tokens[start..<(start + wanted.count)]) == wanted
+            }
+        }
+    }
+
     // A result can occur in multiple sources and topics. Keep one card, retain
     // all its categories, and prefer the record with more useful metadata.
     static func mergeDuplicates(_ videos: [FocusRecommendation]) -> [FocusRecommendation] {

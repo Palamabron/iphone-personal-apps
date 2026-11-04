@@ -9,6 +9,16 @@ import Foundation
         for input in ["", "https://evil.com/watch?v=dQw4w9WgXcQ", "https://youtube.com/shorts/dQw4w9WgXcQ", "https://youtube.com/watch?v=bad", "http://youtube.com/watch?v=dQw4w9WgXcQ", "https://youtube.com.evil.com/watch?v=dQw4w9WgXcQ", "https://user@youtube.com/watch?v=dQw4w9WgXcQ"] { precondition(FocusPolicy.destination(input) == nil, input) }
         for input in ["https://m.youtube.com/shorts/abc", "https://youtube.com/%73horts/abc", "https://youtube.com//Shorts/abc", "youtube://watch", "https://youtube.com.evil.com/", "https://evil.com/", "https://accounts.google.com.evil.com/", "https://youtube.com:444/", "http://youtube.com/"] { precondition(!FocusPolicy.allowed(url(input)), input) }
         for input in ["https://m.youtube.com/results?search_query=hello", "https://www.youtube.com/watch?v=dQw4w9WgXcQ", "https://accounts.google.com/ServiceLogin", "https://consent.youtube.com/"] { precondition(FocusPolicy.allowed(url(input)), input) }
+        let sharedVideo = FocusPolicy.videoLink(url("https://www.youtube.com/watch?v=dQw4w9WgXcQ&list=private&t=42"))
+        precondition(sharedVideo?.absoluteString == "https://m.youtube.com/watch?v=dQw4w9WgXcQ")
+        for input in ["https://m.youtube.com/shorts/dQw4w9WgXcQ", "https://evil.com/watch?v=dQw4w9WgXcQ", "https://m.youtube.com/results?search_query=anything", "https://m.youtube.com/watch?v=bad", "http://youtube.com/watch?v=dQw4w9WgXcQ"] { precondition(FocusPolicy.videoLink(url(input)) == nil, input) }
+        precondition(!FocusRecommendations.freshSearchTitleMatches("घर के छोटे कमरे से शुरू करे ₹5,000 में बिज़नेस | Small business ideas 2026", topic: "Startups & economics"))
+        precondition(!FocusRecommendations.freshSearchTitleMatches("How to maintain your hair", topic: "AI & ML"))
+        precondition(FocusRecommendations.freshSearchTitleMatches("Introduction to machine learning", topic: "AI & ML"))
+        precondition(FocusRecommendations.freshSearchTitleMatches("Nowe badania: fizyka kwantowa", topic: "Science & math"))
+        precondition(FocusRecommendations.freshSearchTitleMatches("Computer science lecture", topic: "Computing"))
+        precondition(FocusRecommendations.freshSearchTitleMatches("Startup fundraising and venture capital", topic: "Startups & economics"))
+        precondition(!FocusRecommendations.freshSearchTitleMatches("Venture capital", topic: "AI & ML"))
         let videos = FocusRecommendations.videos
         precondition(!videos.isEmpty && videos.count <= 30)
         precondition(Set(videos.map(\.id)).count == videos.count)

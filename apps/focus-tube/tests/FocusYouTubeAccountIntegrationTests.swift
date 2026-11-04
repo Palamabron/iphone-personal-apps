@@ -118,16 +118,17 @@ private func testFreshYouTubeDiscovery() async throws {
     let recent = ISO8601DateFormatter().string(from: bed.now.addingTimeInterval(-86_400))
     let old = ISO8601DateFormatter().string(from: bed.now.addingTimeInterval(-400 * 86_400))
     let searchItems = [
-        ("aaaaaaaaaaa", "Useful", "Channel A"), ("bbbbbbbbbbb", "Short", "Channel A"),
-        ("ccccccccccc", "Old", "Channel B"), ("ddddddddddd", "Live", "Channel C"),
-        ("eeeeeeeeeee", "Recent", "Channel D")
+        ("aaaaaaaaaaa", "Useful machine learning science computer startup", "Channel A"), ("bbbbbbbbbbb", "Short machine learning science computer startup", "Channel A"),
+        ("ccccccccccc", "Old machine learning science computer startup", "Channel B"), ("ddddddddddd", "Live machine learning science computer startup", "Channel C"),
+        ("eeeeeeeeeee", "Recent machine learning science computer startup", "Channel D"),
+        ("fffffffffff", "घर में बिज़नेस | Small business ideas 2026", "Manufacturer's Guide")
     ].map { "{\"id\":{\"videoId\":\"\($0.0)\"},\"snippet\":{\"title\":\"\($0.1)\",\"channelTitle\":\"\($0.2)\"}}" }.joined(separator: ",")
     func video(_ id: String, _ duration: String, _ date: String, _ live: String) -> String {
         "{\"id\":\"\(id)\",\"contentDetails\":{\"duration\":\"\(duration)\"},\"snippet\":{\"publishedAt\":\"\(date)\",\"liveBroadcastContent\":\"\(live)\"}}"
     }
     let details = [video("aaaaaaaaaaa", "PT600S", recent, "none"), video("bbbbbbbbbbb", "PT120S", recent, "none"),
                    video("ccccccccccc", "PT600S", old, "none"), video("ddddddddddd", "PT600S", recent, "live"),
-                   video("eeeeeeeeeee", "PT600S", recent, "none")].joined(separator: ",")
+                   video("eeeeeeeeeee", "PT600S", recent, "none"), video("fffffffffff", "PT600S", recent, "none")].joined(separator: ",")
     func configure(_ failSearch: Bool = false) {
         MockURLProtocol.configure { request in
             switch request.url?.path {
@@ -143,11 +144,12 @@ private func testFreshYouTubeDiscovery() async throws {
     try check(account.freshNotice == nil, "Successful sign-in must clear the stale connect notice")
     await account.refreshFreshVideosIfNeeded()
     try check(account.freshVideos.map(\.id) == ["aaaaaaaaaaa", "eeeeeeeeeee"], "Discovery must deduplicate and exclude short, old and live videos")
-    try check(account.freshVideos.allSatisfy { Set($0.allTopics) == Set(FocusRecommendations.topics) }, "A video returned by several searches must retain every matching topic")
+    try check(!account.freshVideos.contains { $0.id == "fffffffffff" }, "Unrelated small business results must not be promoted merely because they are recent")
+    try check(account.freshVideos.allSatisfy { Set($0.allTopics) == Set(["AI & ML", "Science & math", "Computing"]) }, "A video returned by several searches must retain every matching topic")
     try check(account.freshVideos.allSatisfy { $0.publishedAt != nil && $0.reason == "Recent YouTube search result" }, "Discovery must report actual dates and its source")
     let searches = MockURLProtocol.requests().filter { $0.url?.path == "/youtube/v3/search" }
     try check(searches.count == 4, "Only four bounded topic searches are allowed")
-    try check(Set(searches.compactMap { query($0, "q") }) == Set(["machine learning", "science research", "computer science", "startup entrepreneurship"]), "Queries must be fixed and independent of private account data")
+    try check(Set(searches.compactMap { query($0, "q") }) == Set(["machine learning", "science research", "computer science", "software engineering"]), "Queries must be fixed and independent of private account data")
     try check(searches.allSatisfy { query($0, "order") == "relevance" && query($0, "publishedAfter") != nil && query($0, "maxResults") == "25" }, "Queries must bound age and number of results")
     try check(MockURLProtocol.requests().filter { $0.url?.path == "/youtube/v3/videos" }.count == 1, "Video metadata is retrieved in bounded batches")
     configure()
@@ -171,6 +173,58 @@ private func testFreshYouTubeDiscovery() async throws {
     try check(MockURLProtocol.requests().filter { $0.url?.path == "/youtube/v3/search" }.count == 4, "Manual refresh must work after its cooldown")
     let restored = bed.makeAccount()
     try check(restored.freshVideos.map(\.id) == account.freshVideos.map(\.id) && restored.freshLastUpdated != nil, "A later launch must restore the dated public cache")
+    // A result saved by an earlier version must be filtered on restoration too.
+    if let stored = bed.freshCache.data(forKey: "focus.youtube.discovery.v1"),
+       var cache = try JSONSerialization.jsonObject(with: stored) as? [String: Any],
+       var entries = cache["videos"] as? [[String: Any]], var stale = entries.first {
+        stale["id"] = "fffffffffff"
+        stale["title"] = "घर में बिज़नेस | Small business ideas 2026"
+        stale["topic"] = "Startups & economics"
+        stale["additionalTopics"] = []
+        entries.append(stale)
+        cache["videos"] = entries
+        // Match a cache and retry record produced before query versioning.
+        cache.removeValue(forKey: "queryVersion")
+        let legacyData = try JSONSerialization.data(withJSONObject: cache)
+        let migrationBed = TestBed()
+        migrationBed.now = bed.now
+        migrationBed.stored = bed.stored
+        migrationBed.freshCache.set(legacyData, forKey: "focus.youtube.discovery.v1")
+        migrationBed.freshCache.set(migrationBed.now, forKey: "focus.youtube.discovery.attempt.v1")
+        migrationBed.freshCache.set([migrationBed.now], forKey: "focus.youtube.discovery.search-budget.v1")
+        let migrated = migrationBed.makeAccount()
+        try check(!migrated.freshVideos.contains { $0.id == "fffffffffff" }, "Previously cached unrelated results must stay hidden")
+        try check(migrated.freshVideos.count == 2, "Migration must retain previously saved relevant results")
+        configure()
+        await migrated.refreshFreshVideosIfNeeded()
+        try check(MockURLProtocol.requests().isEmpty && migrated.freshNotice?.contains("wait") == true, "Migration must still respect the five-minute search cooldown")
+        migrationBed.now.addTimeInterval(5 * 60 + 1)
+        configure(true)
+        await migrated.refreshFreshVideosIfNeeded()
+        try check(MockURLProtocol.requests().filter { $0.url?.path == "/youtube/v3/search" }.count == 4, "Legacy cache must not suppress the new queries for 24 hours")
+        try check(migrated.freshVideos.count == 2 && migrated.freshNotice != nil, "A failed migration refresh must retain the prior relevant results")
+        migrationBed.now.addTimeInterval(5 * 60 + 1)
+        configure()
+        let migrationRestart = migrationBed.makeAccount()
+        await migrationRestart.refreshFreshVideosIfNeeded()
+        try check(MockURLProtocol.requests().isEmpty, "A failed new-query attempt must retain its retry delay across restarts")
+        migrationBed.now.addTimeInterval(6 * 60 * 60 + 1)
+        await migrationRestart.refreshFreshVideosIfNeeded()
+        try check(MockURLProtocol.requests().filter { $0.url?.path == "/youtube/v3/search" }.count == 4, "The updated query must retry after the failure delay")
+        configure()
+        await migrationRestart.refreshFreshVideosIfNeeded()
+        try check(MockURLProtocol.requests().isEmpty, "A successful updated cache must use its normal refresh interval")
+
+        let budgetBed = TestBed()
+        budgetBed.now = bed.now
+        budgetBed.stored = bed.stored
+        budgetBed.freshCache.set(legacyData, forKey: "focus.youtube.discovery.v1")
+        budgetBed.freshCache.set((0..<12).map { _ in budgetBed.now.addingTimeInterval(-10 * 60) }, forKey: "focus.youtube.discovery.search-budget.v1")
+        let budgetedMigration = budgetBed.makeAccount()
+        configure()
+        await budgetedMigration.refreshFreshVideosIfNeeded()
+        try check(MockURLProtocol.requests().isEmpty && budgetedMigration.freshNotice?.contains("limit") == true, "Migration must respect the rolling daily search budget")
+    } else { throw TestFailure(description: "Expected a restorable discovery cache") }
     bed.now.addTimeInterval(24 * 60 * 60 + 1)
     configure(true)
     await account.refreshFreshVideosIfNeeded()
