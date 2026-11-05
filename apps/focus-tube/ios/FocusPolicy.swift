@@ -14,6 +14,12 @@ enum FocusPolicy {
               validID(id) else { return nil }
         return URL(string: "https://m.youtube.com/watch?v=" + id)
     }
+    // Only a validated video is handed off; no session or tracking parameters travel with it.
+    static func officialAppLink(_ url: URL) -> URL? {
+        guard let canonical = videoLink(url), var components = URLComponents(url: canonical, resolvingAgainstBaseURL: false) else { return nil }
+        components.host = "www.youtube.com"
+        return components.url
+    }
     static func allowed(_ url: URL) -> Bool {
         if isYouTube(url) { return !isShorts(url) }
         return url.scheme == "https" && ["accounts.google.com", "consent.google.com", "consent.youtube.com"].contains(url.host?.lowercased() ?? "") && url.user == nil && url.password == nil && (url.port == nil || url.port == 443)

@@ -96,6 +96,22 @@ final class FocusBrowser: NSObject, ObservableObject, WKNavigationDelegate, WKUI
         guard let url = FocusPolicy.destination(input) else { message = "Enter a search or a video link. Shorts links are blocked."; return }
         open(url)
     }
+    func openCurrentInYouTube() {
+        guard let current = webView.url, let link = FocusPolicy.officialAppLink(current) else {
+            message = "Open a video first, then try again."
+            return
+        }
+        UIApplication.shared.open(link, options: [.universalLinksOnly: true]) { [weak self] opened in
+            DispatchQueue.main.async {
+                guard let self else { return }
+                if opened {
+                    self.webView.pauseAllMediaPlayback(completionHandler: nil)
+                } else {
+                    self.message = "Could not open the YouTube app. Check that it is installed and supports YouTube links. You can copy the video link from About."
+                }
+            }
+        }
+    }
     func goHome() {
         webView.stopLoading()
         webView.pauseAllMediaPlayback(completionHandler: nil)
@@ -258,7 +274,10 @@ struct FocusScreen: View {
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) { Button { browser.goHome() } label: { Image(systemName: "house") }.accessibilityLabel("Home") }
                 ToolbarItemGroup(placement: .topBarTrailing) {
-                    if !browser.home { Button { browser.saveCurrent() } label: { Image(systemName: "bookmark") }.accessibilityLabel("Save video") }
+                    if !browser.home {
+                        Button { browser.openCurrentInYouTube() } label: { Image(systemName: "arrow.up.forward.app") }.accessibilityLabel("Open video in YouTube app")
+                        Button { browser.saveCurrent() } label: { Image(systemName: "bookmark") }.accessibilityLabel("Save video")
+                    }
                     Button { showInfo = true } label: { Image(systemName: "info.circle") }.accessibilityLabel("About")
                 }
                 if !browser.home {
@@ -310,6 +329,7 @@ struct FocusScreen: View {
                     Text("About Focus Tube").font(.title.bold())
                     Text("Search YouTube without Shorts or an endless feed. Results load 15 at a time.")
                     Text("YouTube handles playback and sign-in. Background audio is experimental and may stop when the screen locks. Premium and background playback need testing on your device. Offline playback is unavailable.")
+                    Text("Use Open video in YouTube app to continue there. Focus Tube does not filter the YouTube app. Playback starts from the beginning.").font(.footnote)
                     Text("Subscription sync and video playback use separate sign-ins. If a video asks you to sign in, you can copy its link and paste it into Safari. Sign in to YouTube there if needed. Focus Tube's filter does not run in Safari.").font(.footnote)
                     Button("Copy current video link") {
                         copyVideoStatus = browser.copyCurrentVideoLink() ? "Link copied. Paste it into Safari." : "Open a YouTube video in Focus Tube first."
